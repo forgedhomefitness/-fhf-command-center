@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand: #f9a825;
+  --brand-dark: #e07c00;
+  --surface: #1a1a1f;
+  --surface-raised: #2a2a2f;
+  --surface-overlay: #3a3a3f;
+  --text-primary: #f5f5f6;
+  --text-secondary: #a9a9ae;
+  --text-muted: #7c7c83;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --danger: #f87171;
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-overlay);
+  border-radius: 3px;
+}
+
+/* Card component */
+.card {
+  @apply bg-dark-800 rounded-xl border border-dark-700 p-5;
+}
+
+/* Metric card glow on hover */
+.metric-card {
+  @apply card transition-all duration-200;
+}
+.metric-card:hover {
+  border-color: rgba(249, 168, 37, 0.3);
+  box-shadow: 0 0 20px rgba(249, 168, 37, 0.05);
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply h-2 rounded-full bg-dark-700 overflow-hidden;
+}
+.progress-fill {
+  @apply h-full rounded-full transition-all duration-500;
+  background: linear-gradient(90deg, var(--brand), var(--brand-dark));
+}
+
+/* Pulse animation for live indicator */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.live-dot {
+  @apply w-2 h-2 rounded-full bg-green-400;
+  animation: pulse-dot 2s infinite;
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply bg-dark-700 rounded animate-pulse;
+}
