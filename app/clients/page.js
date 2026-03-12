@@ -7,7 +7,7 @@ const DEFAULT_CLIENTS = [
   { id: 2, name: "Paul Liberman", type: "private", startDate: "2026-03-01", lastSession: "2026-03-12", totalSessions: 9, notes: "8am Mondays/Thursdays", status: "active" },
   { id: 3, name: "Jon Blotner", type: "private", startDate: "2026-03-01", lastSession: "2026-03-10", totalSessions: 6, notes: "6:45am, early bird", status: "active" },
   { id: 4, name: "Jon Nuger", type: "private", startDate: "2026-03-01", lastSession: "2026-03-10", totalSessions: 6, notes: "5:30am, very early", status: "active" },
-  { id: 5, name: "Ali Nuger", type: "private", startDate: "2026-03-01", lastSession: "2026-03-08", totalSessions: 4, notes: "Training partner with Jon", status: "active" },
+  { id: 5, name: "Ali Nuger", type: "private", startDate: "2026-03-01", lastSession: "2026-03-08", totalSessions: 4, notes: "Schedule varies week to week. Tuesdays: private session alone $130. Thursdays: group training with husband Jon Nuger same hour $205. Either may be absent due to travel/work.", status: "active" },
   { id: 6, name: "Richa Saha", type: "private", startDate: "2026-03-01", lastSession: "2026-03-09", totalSessions: 5, notes: "4:30pm sessions", status: "active" },
   { id: 7, name: "Brian Elworthy", type: "private", startDate: "2026-03-13", lastSession: "2026-03-13", totalSessions: 1, notes: "New client, evaluation done", status: "active" },
 ];
