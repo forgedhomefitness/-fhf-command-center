@@ -35,12 +35,12 @@ export default function UpcomingSessions({ sessions, loading }) {
               className="flex items-center justify-between p-3 bg-dark-800/50 rounded-lg"
             >
               <div>
-                <p className="text-sm font-medium text-white">{s.client}</p>
+                <p className="text-sm font-medium text-white">{s.clientName}</p>
                 <p className="text-xs text-dark-400">{s.type}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-dark-200">{s.time}</p>
-                <p className="text-xs text-dark-500">{formatDate(s.date)}</p>
+                <p className="text-sm text-dark-200">{new Date(s.datetime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</p>
+                <p className="text-xs text-dark-500">{formatDate(s.datetime)}</p>
               </div>
             </div>
           ))}
