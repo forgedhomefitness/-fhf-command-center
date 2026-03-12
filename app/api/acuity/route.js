@@ -43,8 +43,8 @@ export async function GET() {
 
     // Fetch this week's sessions and upcoming in parallel
     const [weekAppts, upcoming] = await Promise.all([
-      acuityGet(`/appointments?minDate=${weekStart}&maxDate=${weekEnd}&max=20&direction=ASC`,
-      acuityGet(`/appointments?minDate=${today}&max=10`),
+      acuityGet(`/appointments?minDate=${weekStart}&maxDate=${weekEnd}&max=100`),
+      acuityGet(`/appointments?minDate=${today}&max=20&direction=ASC`),
     ]);
 
     const weekSessions = weekAppts.filter((a) => !a.canceled).length;
