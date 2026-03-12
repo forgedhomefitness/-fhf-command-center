@@ -145,7 +145,7 @@ export default function Dashboard() {
 
       {/* Metric Cards — 6 metrics now */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-        <MetricCard label="Month Revenue" value={stripe?.monthRevenue} target={9000} format="currency" loading={loading && !stripe} />
+        <MetricCard label="Month Revenue" value={acuity?.monthProjectedRevenue} target={9000} format="currency" loading={loading && !stripe} />
         <MetricCard label="Year Revenue" value={stripe?.yearRevenue} target={108000} format="currency" loading={loading && !stripe} />
         <MetricCard label="Sessions This Week" value={acuity?.weekSessions} target={18} format="number" loading={loading && !acuity} />
         <MetricCard label="Instagram Followers" value={instagram?.followers} target={300} format="number" loading={loading && !instagram} />
