@@ -2,25 +2,26 @@ import { NextResponse } from "next/server";
 
 const ACUITY_BASE = "https://acuityscheduling.com/api/v1";
 
+// ORDER MATTERS — more specific keys must come before generic ones
+// "Private Session" is a substring of "Back to Back Private Session"
+// so Back to Back must be listed first
 const PRICE_MAP = {
-  "Private Session": 130,
   "Back to Back Private Session": 205,
   "Group Training": 205,
   "Student Athlete Session": 105,
-  "Senior 30min": 70,
   "Senior 60min": 130,
+  "Senior 30min": 70,
+  "Private Session": 130,
 };
 
 function getPriceForAppointment(appt) {
-    if (!appt.type) return 130;
-    const t = appt.type.toLowerCase();
-    if (t.includes("back to back")) return 205;
-    if (t.includes("group training")) return 205;
-    if (t.includes("student athlete")) return 105;
-    if (t.includes("senior 30min") || t.includes("senior 30")) return 70;
-    if (t.includes("senior 60min") || t.includes("senior 60") || t.includes("senior")) return 130;
-    return 130;
-}
+  if (!appt.type) return 130;
+  const type = appt.type.toLowerCase();
+  for (const [key, price] of Object.entries(PRICE_MAP)) {
+    if (type.includes(key.toLowerCase())) {
+      return price;
+    }
+  }
   return 130;
 }
 
