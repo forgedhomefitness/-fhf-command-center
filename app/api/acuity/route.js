@@ -7,7 +7,307 @@ async function acuityGet(endpoint) {
     `${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`
 import { NextResponse } from "next/server";
   
+import { NextResponse } from "next/server";
+  
   const ACUITY_BASE = "https://acuityscheduling.com/api/v1";
+  
+  // Pricing map — matches Acuity appointment type names to dollar amounts
+  const PRICE_MAP = {
+      "Private Session": 130,
+      "Back to Back Private Session": 205,
+      "Group Training": 205,
+      "Student Athlete Session": 105,
+      "Senior 30min": 70,
+      "Senior 60min": 130,
+  };
+  
+  function getPriceForAppointment(appt) {
+      // Match by appointment type name (Acuity returns 'type' as the type name)
+      for (const [key, price] of Object.entries(PRICE_MAP)) {
+            if (appt.type && appt.type.toLowerCase().includes(key.toLowerCase())) {
+                    return price;
+            }
+      }
+      // Default to private session rate if no match
+      return 130;
+  }
+  
+  async function acuityGet(endpoint) {
+      const credentials = Buffer.from(
+            `${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`
+          ).toString("base64");
+    
+      const res = await fetch(`${ACUITY_BASE}${endpoint}`, {
+            headers: { Authorization: `Basic ${credentials}` },
+            cache: "no-store",
+      });
+    
+      if (!res.ok) {
+            throw new Error(`Acuity API error: ${res.status}`);
+      }
+      return res.json();
+  }
+  
+  export async function GET() {
+      if (!process.env.ACUITY_USER_ID || !process.env.ACUITY_API_KEY) {
+            return NextResponse.json(
+              { error: "Acuity credentials not configured", connected: false },
+              { status: 503 }
+                  );
+      }
+    
+      try {
+            const now = new Date();
+        
+            // Week boundaries (Mon-Sun)
+            const day = now.getDay();
+            const mondayOffset = day === 0 ? -6 : 1 - day;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + mondayOffset);
+            monday.setHours(0, 0, 0, 0);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            sunday.setHours(23, 59, 59, 999);
+        
+            // Month boundaries for projected revenue calculation
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            coinmspto rmto n{t hNEenxdt R=e snpeown sDea t}e (fnroowm. g"enteFxutl/lsYeeravre(r)",; 
+        n
+          ocwo.ngsett MAoCnUtIhT(Y)_ B+A S1E,  =0 )";h
+            t t p s :m/o/natchuEintdy.sscehteHdouulrisn(g2.3c,o m5/9a,p i5/9v,1 "9;9
+            9
+            )/;/
+               
+        P r i c i/n/g  Tmoadpa y—  fmoart cuhpecso mAicnugi tsye saspipoonisn
+          t m e n tc otnyspte  tnoadmaeys  =t on odwo.ltloaIrS OaSmtoruinntgs(
+            )c.osnpslti tP(R"ITC"E)_[M0A]P; 
+        =   { 
+            c o"nPsrti vwaeteek SSteasrsti o=n "m:o n1d3a0y,.
+              t o I"SBOaSctkr itnog (B)a.cskp lPirti(v"aTt"e) [S0e]s;s
+              i o n " :c o2n0s5t, 
+              w e e"kGErnodu p=  Tsruanidnaiyn.gt"o:I S2O0S5t,r
+              i n g"(S)t.usdpelnitt (A"tTh"l)e[t0e] ;S
+                e s s i ocno"n:s t1 0m5o,n
+                t h S"tSaerntiSotrr  3=0 mmionn"t:h S7t0a,r
+                t . t"oSIeSnOiSotrr i6n0gm(i)n."s:p l1i3t0(,"
+                  T}";)
+          [
+          0f]u;n
+          c t i o nc ognesttP rmiocnetFhoErnAdpSptori n=t mmeonntt(haEpnpdt.)t o{I
+            S O S/t/r iMnagt(c)h. sbpyl iatp(p"oTi"n)t[m0e]n;t
+               
+                                                                                 t y p e  /n/a mFee t(cAhc uwieteyk  raeptpuorinnst m'etnytpse,'  uapsc otmhien gt yspees sniaomnes),
+                                                                                     a nfdo ra l(lc omnosntt h[ kaepyp,o ipnrtimceen]t so fi nO bpjaercatl.leenlt
+                                                                                   r i e s (cPoRnIsCtE _[MwAePe)k)A p{p
+                                                                                     t s ,   uipfc o(maipnpgt,. tmyopnet h&A&p patpsp]t .=t yapwea.itto LPorwoemriCsaes.ea(l)l.(i[n
+                                                                                                                                                                                c l u d e s (akceuyi.ttyoGLeotw(e`r/Caapspeo(i)n)t)m e{n
+                                                                                                                                                                                t s ? m i n Draetteu=r$n{ wpereikcSet;a
+                                                                                                                                                                                r t } & m}a
+                                                                                                                                                                                x D a}t
+                                                                                                                                                                                e = $/{/w eDeekfEanudl}t& mtaox =p1r0i0v`a)t,e
+                                                                                                                                                                                               s e s s i oanc uriattyeG eitf( `n/oa pmpaoticnht
+                                                                                                                                                                                               m e nrtest?umrinn D1a3t0e;=
+                                                                                                                                                                                               $}{
+                                                                                                                                                                                               t
+                                                                                                                                                                                               oadsayyn}c& mfauxn=c2t0i&odni raeccutiitoynG=eAtS(Ce`n)d,p
+                                                                                       o i n t )   {a
+                                                                                         c u ictoynGsett (c`r/eadpepnotiinatlmse n=t sB?umfifneDra.tfer=o$m{(m
+                                                                                         o n t h S`t$a{rptrSotcre}s&sm.aexnDva.tAeC=U$I{TmYo_nUtShEERn_dISDt}r:}$&{mparxo=c2e0s0s`.)e,n
+                                                                                         v . A C U]I)T;Y
+                                                                                         _
+                                                                                         A P I _ KcEoYn}s`t
+                                                                                                                                                                     w e)e.ktSoeSstsriionngs( "=b awseee6k4A"p)p;t
+                                                                                                                                                                       s
+                                                                                                                                                                         . f iclotnesrt( (rae)s  ==>  a!waa.icta nfceetlcehd()`.$l{eAnCgUtIhT;Y
+                                                                                                                                                                         _
+                                                                                                                                                                         B A S E }/$/{ eCnadlpcouilnatt}e` ,p r{o
+                                                                                                                                                                         j e c t ehde amdoenrtsh:  r{e vAeuntuheo rfirzoamt iAoLnL:  s`cBhaesdiucl e$d{ c(rneodne-nctainaclesl}l`e d}), 
+                                                                                                                                                                           a p p o icnatcmheen:t s" ntoh-isst omroen"t,h
+                                                                                                                                                                           
+                                                                                                                                                                                                                    } ) ;c
+                                                                                                                                                                         o
+                                                                                                                                                                           n s ti fm o(n!trheSsc.hoekd)u l{e
+                                                                                                                                                                             d A p p ttsh r=o wm onnetwh AEprprtosr.(f`iAlctueirt(y( aA)P I= >e r!rao.rc:a n$c{erleesd.)s;t
+                                                                                                                                                                             a t u s }c`o)n;s
+                                                                                                                                                                               t   m}o
+                                                                                                                                                                             n t hrPertoujrenc treedsR.ejvseonnu(e) ;=
+                                                                                                                      }m
+                                                                                     o
+                                                                                       netxhpSocrhte dauslyendcA pfputnsc.trieodnu cGeE(T((s)u m{,
+                                                                                           a pipft )( !=p>r o{c
+                                                                                         e s s . e n vr.eAtCuUrInT Ys_uUmS E+R _gIeDt P|r|i c!epFroorcAepspso.ienntvm.eAnCtU(IaTpYp_tA)P;I
+                                                                                           _ K E Y )} ,{ 
+                                                                                         0 ) ; 
+                                                                                          
+                                                                                         r e t u r/n/  NReexvteRneusep oanlsree.ajdsyo ne(a
+                                                                                                                                          r n e d   t h{i se rmroonrt:h  "(Aacpupiotiyn tcmreendtesn tiina ltsh en opta scto)n
+                                                                                           f i g u rceodn"s,t  cnoonwnMesc t=e dn:o wf.aglesteT i}m,e
+                                                                                           ( ) ; 
+                                                                                                                                                        {  csotnasttu se:a r5n0e3d A}p
+                                                                                                                                                          p t s   =) ;m
+                                                                                                                                                            o n t}h
+                                                                                           S
+                                                                                             c h etdruyl e{d
+                                                                                               A p p t sc.ofnisltt enro(w
+                                                                                                                          =   n e w  (Daa)t e=(>) ;n
+                                                                                                 e
+                                                                                                   w   D a t/e/( aW.edeakt ebtoiumned)a.rgieetsT i(mMeo(n)- S<u nn)o
+                                                                                                     w M s 
+                                                                                                         c o n s)t; 
+                                                                                                           d a y   =c onnoswt. gmeotnDtahyE(a)r;n
+                                                                                                             e d R e vceonnuset  =m oenadranyeOdfAfpspetts .=r eddauyc e=(=(=s u0m ,?  a-p6p t:)  1= >-  {d
+                                                                                                                                                                                                          a y ; 
+                                                                                                                 r ectounrsnt  smuomn d+a yg e=t Pnreiwc eDFaotreA(pnpoowi)n;t
+                                                                                                                   m e n t (maopnpdta)y;.
+                                                                                                           s e t D a}t,e (0n)o;w
+                                                                                               .
+                                                                                               g e t D a/t/e (R)e m+a imnoinndga yrOefvfesneute) ;s
+                                                                                               t i l l  moonn dtahye. ssecthHeoduurlse( 0t,h i0s,  m0o,n t0h)
+                                                                                                 ; 
+                                                                                               c ocnosnts tr esmuanidnaiyn g=A pnpetws  D=a tmeo(nmtohnSdcahye)d;u
+                                                                                                 l e d A psputnsd.afyi.lsteetrD(a
+                                                                                                                                t e ( m o n d(aay). g=e>t Dnaetwe (D)a t+e (6a).;d
+                                                                                                   a t e t ismuen)d.agye.tsTeitmHeo(u)r s>(=2 3n,o w5M9s,
+                                                                                                       5 9 ,  )9;9
+                                                                                                     9 ) ; 
+                                                                                          
+                                                                                         c o n s t/ /m oMnotnhtRhe mbaoiunnidnagrRieevse nfuoer  =p rroejmeacitneidn grAepvpetnsu.er ecdaulcceu(l(astuimo,n 
+                                                                                           a p p t )c o=n>s t{ 
+                                                                                             m o n t h S traerttu r=n  nseuwm  D+a tgee(tnPorwi.cgeeFtoFruAlplpYoeianrt(m)e,n tn(oawp.pgte)t;M
+                                                                                               o n t h (}),,  01));;
+                                                                                             
+                                                                                             
+                                                                                                     c/o/n sFto rmmoantt huEpncdo m=i nnge ws eDsastieo(nnso wf.ogre tdFiuslpllYaeya
+                                                                                                       r ( ) ,  cnoonws.tg eutpMcoonmtihn(g)F o+r m1a,t t0e)d; 
+                                                                                         =   u p cmoomnitnhgE
+                                                                                           n d . s e t H.ofuirlst(e2r3(,( a5)9 ,= >5 9!,a .9c9a9n)c;e
+                                                                                             l
+                                                                                               e d ) 
+                                                                                                   / /   T o d.asyl ifcoer( 0u,p c1o0m)i
+                                                                                                 n g   s e s s.imoanps(
+                                                                                                   ( a )   =c>o n(s{t
+                                                                                                                      t o d a y   =  indo:w .at.oiIdS,O
+                                                                                                                        S t r i n g ( ) .cslpileintt(N"aTm"e):[ 0`]$;{
+                                                                                                                        a . f i rcsotnNsatm ew}e e$k{Sat.alrats t=N ammoen}d`a,y
+                                                                                                                          . t o I S O S t rtiynpge(:) .as.ptlyipte(,"
+                                                                                                                          T " ) [ 0 ] ; 
+                                                                                                                            d a t ectoinmset:  wae.edkaEtnedt i=m es,u
+                                                                                                                          n d a y . t o I SpOrSitcrei:n gg(e)t.PsrpilcietF(o"rTA"p)p[o0i]n;t
+                                                                                                                            m e n t (cao)n,s
+                                                                                                                              t   m o n t h S tdaurrtaSttiro n=:  mao.ndtuhrSattairotn.,t
+                                                                                                                                o I S O S t r i nlgo(c)a.tsipolni:t (a".Tl"o)c[a0t]i;o
+                                                                                                                                  n   | |  c"oInns-tH ommoen"t,h
+                                                                                                                                    E n d S t r  }=) )m;o
+                                                                                                   n
+                                                                                                     t h E n d/./t oPIeSrO-Sctlriienngt( )r.esvpelniute( "bTr"e)a[k0d]o;w
+                                                                                                       n
+                                                                                                           f o r  /t/h iFse tmcohn twhe
+                                                                                                             e k   a pcpoonisntt mcelnitesn,t RuepvceonmuienMga ps e=s s{i}o;n
+                                                                                                               s ,   a nfdo ra l(lc omnosntt ha papptp ooifn tmmoenntthsS cihne dpualreadlAlpeplt
+                                                                                                                 s )   { 
+                                                                                                                   c o n s t   [cwoenesktA pnpatmse,  =u p`c$o{maipnpgt,. fmiornstthNAapmpet}s ]$ {=a papwta.ilta sPtrNoammies}e`.;a
+                                                                                                                     l l ( [ 
+                                                                                                                           i f   ( !accluiietnytGReetv(e`n/uaepMpaopi[nntammeen]t)s ?{m
+                                                                                                                           i n D a t e = $ {cwleieeknSttRaervte}n&umeaMxaDpa[tnea=m$e{]w e=e k{E nsde}s&smiaoxn=s1:0 00`,) ,r
+                                                                                                                                  e v e n u e :a c0u i}t;y
+                                                                                                                   G e t ( ` / a}p
+                                                                                                                   p o i n t m ecnltise?nmtiRneDvaetneu=e$M{atpo[dnaaym}e&]m.asxe=s2s0i&odnisr e+c=t i1o;n
+                                                                                                                   = A S C ` ) ,c
+                                                                                                                     l i e n t R eavceuniuteyMGaept[(n`a/maep]p.orienvtemneunet s+?=m igneDtaPtrei=c$e{FmoornAtphpSotianrttmSetnrt}(&ampapxtD)a;t
+                                                                                                                     e = $ { m}o
+                                                                                                                     n
+                                                                                                                     t h E n drSettru}r&nm aNxe=x2t0R0e`s)p,o
+                                                                                                                       n s e . j]s)o;n
+                                                                                                                       (
+                                                                                                                         { 
+                                                                                                                                 c o n scto nwneeecktSeeds:s itornuse ,=
+                                                                                                                         w e e k A pwpetesk.Sfeislstieorn(s(,a
+                                                                                                                                                          )   = >   ! aw.eceaknTcaerlgeedt):. l1e8n,g
+                                                                                                                       t h ; 
+                                                                                          
+                                                                                             u p c/o/m iCnagl:c uulpactoem ipnrgoFjoercmtaetdt emdo,n
+                                                                                               t h   r e v e/n/u eR efvreonmu eA LpLr osjcehcetdiuolnesd  b(ansoend- coann caecltlueadl)  Aacpupiotiyn tsmcehnetdsu lteh
+                                                                                                 i s   m o n tmho
+                                                                                                   n t h P rcoojnesctt emdoRnetvheSncuhee,d u l e d A p p/t/s  T=o tmaoln tahlAlp pstcsh.efdiullteedr (a(pap)o i=n>t m!ean.tcsa ntcheilse dm)o;n
+                                                                                                     t h 
+                                                                                                           c o n s tm omnotnhtEhaPrrnoejdeRcetveednRueev,e n u e   =   m o n t h/S/c hAeldruelaeddyA phpatpsp.erneeddu c(ep(a(sstu)m
+                                                                                                                                                                                                                            ,   a p p t )m o=n>t h{R
+                                                                                                             e m a i n i nrgeRteuvrenn useu,m   +   g e t P r/i/c eSFtoirlAlp pcooimnitnmge n(tf(uatpuprte));
+                                                                                                                                                                                                                                                   
+                                                                                                                                                                                                                                                            } ,m o0n)t;h
+                                                                                                             S
+                                                                                                               e s s i o/n/C oRuenvte:n umeo natlhrSecahdeyd uelaerdnAepdp ttsh.ilse nmgotnht,h
+                                                                                                                   ( a p p o icnltimeennttRse vienn utehBer epaaksdto)w
+                                                                                                                 n :   c lcioennsttR envoewnMuse M=a pn,o
+                                                                                                                   w . g e t}T)i;m
+                                                                                         e ( )}; 
+        c a t c hc o(nesrtr )e a{r
+          n e d A prpettsu r=n  mNoenxtthRSecshpeodnuslee.djAspopnt(s
+                                                                    . f i l t e r{( 
+            e r r o r :  (ear)r .=m>e snseawg eD,a tceo(nan.edcatteedt:i mfea)l.sgee t}T,i
+            m e ( )   <  {n oswtMast
+                          u s :   5)0;0
+                                } 
+            c o n)s;t
+                m o}n
+        t}h
+    EarnedRevenue = earnedAppts.reduce((sum, appt) => {
+            return sum + getPriceForAppointment(appt);
+    }, 0);
+  
+      // Remaining revenue still on the schedule this month
+      const remainingAppts = monthScheduledAppts.filter(
+              (a) => new Date(a.datetime).getTime() >= nowMs
+                    );
+      const monthRemainingRevenue = remainingAppts.reduce((sum, appt) => {
+              return sum + getPriceForAppointment(appt);
+      }, 0);
+  
+      // Format upcoming sessions for display
+      const upcomingFormatted = upcoming
+              .filter((a) => !a.canceled)
+              .slice(0, 10)
+              .map((a) => ({
+                        id: a.id,
+                        clientName: `${a.firstName} ${a.lastName}`,
+                        type: a.type,
+                        datetime: a.datetime,
+                        price: getPriceForAppointment(a),
+                        duration: a.duration,
+                        location: a.location || "In-Home",
+              }));
+  
+      // Per-client revenue breakdown for this month
+      const clientRevenueMap = {};
+      for (const appt of monthScheduledAppts) {
+              const name = `${appt.firstName} ${appt.lastName}`;
+              if (!clientRevenueMap[name]) {
+                        clientRevenueMap[name] = { sessions: 0, revenue: 0 };
+              }
+              clientRevenueMap[name].sessions += 1;
+              clientRevenueMap[name].revenue += getPriceForAppointment(appt);
+      }
+  
+      return NextResponse.json({
+              connected: true,
+              weekSessions,
+              weekTarget: 18,
+              upcoming: upcomingFormatted,
+              // Revenue projections based on actual Acuity schedule
+              monthProjectedRevenue,       // Total all scheduled appointments this month
+              monthEarnedRevenue,           // Already happened (past)
+              monthRemainingRevenue,        // Still coming (future)
+              monthSessionCount: monthScheduledAppts.length,
+              clientRevenueBreakdown: clientRevenueMap,
+      });
+} catch (err) {
+      return NextResponse.json(
+  { error: err.message, connected: false },
+  { status: 500 }
+      );
+}
+}
+const ACUITY_BASE = "https://acuityscheduling.com/api/v1";
   
   // Pricing map — matches Acuity appointment type names to dollar amounts
   const PRICE_MAP = {
