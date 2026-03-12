@@ -12,11 +12,15 @@ const PRICE_MAP = {
 };
 
 function getPriceForAppointment(appt) {
-  for (const [key, price] of Object.entries(PRICE_MAP)) {
-    if (appt.type && appt.type.toLowerCase().includes(key.toLowerCase())) {
-      return price;
-    }
-  }
+    if (!appt.type) return 130;
+    const t = appt.type.toLowerCase();
+    if (t.includes("back to back")) return 205;
+    if (t.includes("group training")) return 205;
+    if (t.includes("student athlete")) return 105;
+    if (t.includes("senior 30min") || t.includes("senior 30")) return 70;
+    if (t.includes("senior 60min") || t.includes("senior 60") || t.includes("senior")) return 130;
+    return 130;
+}
   return 130;
 }
 
