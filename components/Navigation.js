@@ -1,11 +1,12 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: BarChartIcon },
+  { href: "/clients", label: "Clients", icon: UsersIcon },
+  { href: "/leads", label: "Lead Pipeline", icon: FunnelIcon },
   { href: "/checkin", label: "Weekly Check-In", icon: ClipboardIcon },
   { href: "/tasks", label: "Tasks", icon: ChecklistIcon },
   { href: "/settings", label: "Integrations", icon: GearIcon },
@@ -18,10 +19,8 @@ export default function Navigation() {
   return (
     <>
       {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileOpen(!mobileOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden bg-dark-800 border border-dark-700 rounded-lg p-2"
-      >
+      <button onClick={() => setMobileOpen(!mobileOpen)}
+        className="fixed top-4 left-4 z-50 md:hidden bg-dark-800 border border-dark-700 rounded-lg p-2">
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           {mobileOpen ? (
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -31,51 +30,31 @@ export default function Navigation() {
         </svg>
       </button>
 
-      {/* Overlay */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-30 md:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Sidebar */}
-      <nav
-        className={`fixed top-0 left-0 h-full w-64 bg-dark-900 border-r border-dark-700 z-40 transform transition-transform duration-200 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
-      >
+      <nav className={`fixed top-0 left-0 h-full w-64 bg-dark-900 border-r border-dark-700 z-40 transform transition-transform duration-200 ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}>
         <div className="p-6">
-          {/* Logo / Brand */}
           <div className="mb-8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-brand-500 flex items-center justify-center">
                 <span className="text-dark-950 font-bold text-lg">F</span>
               </div>
               <div>
-                <h1 className="text-sm font-bold text-white leading-tight">
-                  Forged Home Fitness
-                </h1>
+                <h1 className="text-sm font-bold text-white leading-tight">Forged Home Fitness</h1>
                 <p className="text-xs text-dark-400">Command Center</p>
               </div>
             </div>
           </div>
 
-          {/* Nav links */}
           <ul className="space-y-1">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-brand-500/10 text-brand-400"
-                        : "text-dark-300 hover:text-white hover:bg-dark-800"
-                    }`}
-                  >
+                  <Link href={item.href} onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive ? "bg-brand-500/10 text-brand-400" : "text-dark-300 hover:text-white hover:bg-dark-800"}`}>
                     <item.icon active={isActive} />
                     {item.label}
                   </Link>
@@ -85,12 +64,9 @@ export default function Navigation() {
           </ul>
         </div>
 
-        {/* Phase indicator at bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-dark-700">
           <div className="text-xs text-dark-400 mb-1">CURRENT PHASE</div>
-          <div className="text-sm font-medium text-brand-400">
-            Phase 1 — Build Foundation
-          </div>
+          <div className="text-sm font-medium text-brand-400">Phase 1 — Build Foundation</div>
           <div className="text-xs text-dark-500 mt-1">2026 Target: $108K</div>
         </div>
       </nav>
@@ -98,12 +74,26 @@ export default function Navigation() {
   );
 }
 
-// Simple inline SVG icons
 function BarChartIcon({ active }) {
   return (
     <svg className={`w-5 h-5 ${active ? "text-brand-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M3 3v18h18M7 16v-4m4 4v-8m4 8v-6m4 6v-10" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3v18h18M7 16v-4m4 4v-8m4 8v-6m4 6v-10" />
+    </svg>
+  );
+}
+
+function UsersIcon({ active }) {
+  return (
+    <svg className={`w-5 h-5 ${active ? "text-brand-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+function FunnelIcon({ active }) {
+  return (
+    <svg className={`w-5 h-5 ${active ? "text-brand-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
     </svg>
   );
 }
@@ -111,8 +101,7 @@ function BarChartIcon({ active }) {
 function ClipboardIcon({ active }) {
   return (
     <svg className={`w-5 h-5 ${active ? "text-brand-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
     </svg>
   );
 }
@@ -120,10 +109,8 @@ function ClipboardIcon({ active }) {
 function ChecklistIcon({ active }) {
   return (
     <svg className={`w-5 h-5 ${active ? "text-brand-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M9 5l7 7-7 7" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M5 12h14" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14" />
     </svg>
   );
 }
@@ -131,10 +118,8 @@ function ChecklistIcon({ active }) {
 function GearIcon({ active }) {
   return (
     <svg className={`w-5 h-5 ${active ? "text-brand-400" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   );
 }
