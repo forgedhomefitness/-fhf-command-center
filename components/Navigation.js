@@ -1,7 +1,8 @@
 "use client";
+
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: BarChartIcon },
@@ -14,7 +15,14 @@ const NAV_ITEMS = [
 
 export default function Navigation() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <>
@@ -82,6 +90,16 @@ export default function Navigation() {
           <div className="text-xs text-navy-100/40 uppercase tracking-wider font-heading">Current Phase</div>
           <div className="text-sm font-medium text-brand-500 font-heading">Phase 1 — Build Foundation</div>
           <div className="text-xs text-navy-100/50 mt-1">2026 Target: $108K</div>
+
+          <button
+            onClick={handleLogout}
+            className="mt-4 flex items-center gap-2 text-xs text-navy-100/40 hover:text-red-400 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign Out
+          </button>
         </div>
       </nav>
     </>
@@ -136,4 +154,4 @@ function GearIcon({ active }) {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   );
-}
+  }
