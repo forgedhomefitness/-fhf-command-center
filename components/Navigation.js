@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: BarChartIcon },
   { href: "/clients", label: "Clients", icon: UsersIcon },
   { href: "/leads", label: "Lead Pipeline", icon: FunnelIcon },
+  { href: "/finances", label: "Finances", icon: DollarIcon },
   { href: "/checkin", label: "Weekly Check-In", icon: ClipboardIcon },
   { href: "/tasks", label: "Tasks", icon: ChecklistIcon },
   { href: "/settings", label: "Integrations", icon: GearIcon },
@@ -130,6 +131,14 @@ function FunnelIcon({ active }) {
   );
 }
 
+function DollarIcon({ active }) {
+  return (
+    <svg className={`w-5 h-5 ${active ? "text-brand-500" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
 function ClipboardIcon({ active }) {
   return (
     <svg className={`w-5 h-5 ${active ? "text-brand-500" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,4 +163,4 @@ function GearIcon({ active }) {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
   );
-  }
+}
