@@ -17,8 +17,11 @@ const PRICE_MAP = {
 function getPriceForAppointment(appt) {
   if (!appt.type) return 130;
   const type = appt.type.toLowerCase();
+
   // Free evaluations and complimentary sessions = $0
-  if (type.includes("free") || type.includes("complimentary") || type.includes("evaluation")) return 0;
+  if (type.includes("free") || type.includes("complimentary") || type.includes("evaluation"))
+    return 0;
+
   for (const [key, price] of Object.entries(PRICE_MAP)) {
     if (type.includes(key.toLowerCase())) {
       return price;
@@ -31,6 +34,7 @@ async function acuityGet(endpoint) {
   const credentials = Buffer.from(
     `${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`
   ).toString("base64");
+
   const res = await fetch(`${ACUITY_BASE}${endpoint}`, {
     headers: { Authorization: `Basic ${credentials}` },
     cache: "no-store",
@@ -53,12 +57,20 @@ export async function GET() {
     const now = new Date();
     const day = now.getDay();
     const mondayOffset = day === 0 ? -6 : 1 - day;
+
     const monday = new Date(now);
     monday.setDate(now.getDate() + mondayOffset);
     monday.setHours(0, 0, 0, 0);
+
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
+
+    // Last week range for comparison
+    const lastMonday = new Date(monday);
+    lastMonday.setDate(monday.getDate() - 7);
+    const lastSunday = new Date(sunday);
+    lastSunday.setDate(sunday.getDate() - 7);
 
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -67,18 +79,33 @@ export async function GET() {
     const today = now.toISOString().split("T")[0];
     const weekStart = monday.toISOString().split("T")[0];
     const weekEnd = sunday.toISOString().split("T")[0];
+    const lastWeekStart = lastMonday.toISOString().split("T")[0];
+    const lastWeekEnd = lastSunday.toISOString().split("T")[0];
     const monthStartStr = monthStart.toISOString().split("T")[0];
     const monthEndStr = monthEnd.toISOString().split("T")[0];
 
-    const [weekAppts, upcoming, monthAppts] = await Promise.all([
+    const [weekAppts, lastWeekAppts, upcoming, monthAppts] = await Promise.all([
       acuityGet(`/appointments?minDate=${weekStart}&maxDate=${weekEnd}&max=100`),
+      acuityGet(`/appointments?minDate=${lastWeekStart}&maxDate=${lastWeekEnd}&max=100`),
       acuityGet(`/appointments?minDate=${today}&max=20&direction=ASC`),
       acuityGet(`/appointments?minDate=${monthStartStr}&maxDate=${monthEndStr}&max=200`),
     ]);
 
-    const weekSessions = weekAppts.filter((a) => !a.canceled).length;
-    const monthScheduledAppts = monthAppts.filter((a) => !a.canceled);
+    const activeWeekAppts = weekAppts.filter((a) => !a.canceled);
+    const weekSessions = activeWeekAppts.length;
+    const weekRevenue = activeWeekAppts.reduce(
+      (sum, appt) => sum + getPriceForAppointment(appt),
+      0
+    );
 
+    const activeLastWeekAppts = lastWeekAppts.filter((a) => !a.canceled);
+    const lastWeekSessions = activeLastWeekAppts.length;
+    const lastWeekRevenue = activeLastWeekAppts.reduce(
+      (sum, appt) => sum + getPriceForAppointment(appt),
+      0
+    );
+
+    const monthScheduledAppts = monthAppts.filter((a) => !a.canceled);
     const monthProjectedRevenue = monthScheduledAppts.reduce((sum, appt) => {
       return sum + getPriceForAppointment(appt);
     }, 0);
@@ -118,6 +145,9 @@ export async function GET() {
     return NextResponse.json({
       connected: true,
       weekSessions,
+      weekRevenue,
+      lastWeekSessions,
+      lastWeekRevenue,
       weekTarget: 18,
       upcoming: upcomingFormatted,
       monthProjectedRevenue,
