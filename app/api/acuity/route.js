@@ -17,6 +17,8 @@ const PRICE_MAP = {
 function getPriceForAppointment(appt) {
   if (!appt.type) return 130;
   const type = appt.type.toLowerCase();
+  // Free evaluations and complimentary sessions = $0
+  if (type.includes("free") || type.includes("complimentary") || type.includes("evaluation")) return 0;
   for (const [key, price] of Object.entries(PRICE_MAP)) {
     if (type.includes(key.toLowerCase())) {
       return price;
@@ -29,12 +31,10 @@ async function acuityGet(endpoint) {
   const credentials = Buffer.from(
     `${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`
   ).toString("base64");
-
   const res = await fetch(`${ACUITY_BASE}${endpoint}`, {
     headers: { Authorization: `Basic ${credentials}` },
     cache: "no-store",
   });
-
   if (!res.ok) {
     throw new Error(`Acuity API error: ${res.status}`);
   }
@@ -51,7 +51,6 @@ export async function GET() {
 
   try {
     const now = new Date();
-
     const day = now.getDay();
     const mondayOffset = day === 0 ? -6 : 1 - day;
     const monday = new Date(now);
@@ -85,7 +84,6 @@ export async function GET() {
     }, 0);
 
     const nowMs = now.getTime();
-
     const monthEarnedRevenue = monthScheduledAppts
       .filter((a) => new Date(a.datetime).getTime() < nowMs)
       .reduce((sum, appt) => sum + getPriceForAppointment(appt), 0);
