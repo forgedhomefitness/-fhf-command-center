@@ -1,5 +1,5 @@
 import "./globals.css";
-import Navigation from "@/components/Navigation";
+import AuthLayoutWrapper from "@/components/AuthLayoutWrapper";
 
 export const metadata = {
   title: "FHF Command Center",
@@ -10,12 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="min-h-screen bg-dark-950">
-        <div className="flex min-h-screen">
-          <Navigation />
-          <main className="flex-1 ml-0 md:ml-64 p-4 md:p-8">
-            {children}
-          </main>
-        </div>
+        <AuthLayoutWrapper>{children}</AuthLayoutWrapper>
       </body>
     </html>
   );
