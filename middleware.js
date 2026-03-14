@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = ["/login", "/api/auth", "/api/reports", "/api/acuity", "/api/quickbooks"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth",
+  "/api/reports",
+  "/api/acuity",
+  "/api/quickbooks",
+  "/api/stripe",
+];
+
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
@@ -17,7 +25,6 @@ export async function middleware(request) {
 
   // Check auth cookie
   const token = request.cookies.get("fhf-auth")?.value;
-
   if (!token) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
