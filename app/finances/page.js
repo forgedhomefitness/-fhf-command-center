@@ -16,7 +16,6 @@ function TaxReserveCard({ title, subtitle, grossAmount, taxAmount, color }) {
         {title}
       </h3>
       <p className="text-xs text-dark-500 mb-4">{subtitle}</p>
-
       <div className="flex items-end gap-2 mb-1">
         <span className="text-4xl font-bold text-white font-heading">
           {formatCurrency(taxAmount)}
@@ -25,7 +24,6 @@ function TaxReserveCard({ title, subtitle, grossAmount, taxAmount, color }) {
       <p className="text-xs text-dark-400 mb-4">
         30% of {formatCurrency(grossAmount)}
       </p>
-
       <div className="w-full bg-dark-700 rounded-full h-3 mb-2">
         <div
           className={`${color} h-3 rounded-full transition-all`}
@@ -40,7 +38,7 @@ function TaxReserveCard({ title, subtitle, grossAmount, taxAmount, color }) {
   );
 }
 
-function MonthlyBreakdownTable({ acuityMonths, qbMonths }) {
+function MonthlyBreakdownTable({ acuityMonths, qbMonths, stripeData }) {
   // Merge Acuity and QB months by label
   const allMonthKeys = new Set();
   const acuityMap = {};
@@ -52,10 +50,8 @@ function MonthlyBreakdownTable({ acuityMonths, qbMonths }) {
       acuityMap[m.key || m.label] = m;
     }
   }
-
   if (qbMonths) {
     for (const m of qbMonths) {
-      // QB months come as "Jan 2026" etc — normalize to key
       allMonthKeys.add(m.label);
       qbMap[m.label] = m;
     }
@@ -73,10 +69,16 @@ function MonthlyBreakdownTable({ acuityMonths, qbMonths }) {
     );
   }
 
+  // Estimate Stripe fees per month proportionally
+  const totalAcuityGross = Object.values(acuityMap).reduce(
+    (s, m) => s + (m.revenue || 0),
+    0
+  );
+
   return (
     <div className="card overflow-x-auto">
       <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide font-heading mb-4">
-        Monthly Breakdown — YTD
+        Monthly Breakdown â YTD
       </h3>
       <table className="w-full text-sm">
         <thead>
@@ -85,22 +87,19 @@ function MonthlyBreakdownTable({ acuityMonths, qbMonths }) {
               Month
             </th>
             <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
-              Gross Rev (Acuity)
+              Gross Rev
+            </th>
+            <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
+              Stripe Fees
+            </th>
+            <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
+              Net Revenue
             </th>
             <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
               Sessions
             </th>
             <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
-              QB Income
-            </th>
-            <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
               QB Expenses
-            </th>
-            <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
-              Net Profit
-            </th>
-            <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
-              Tax (30% Gross)
             </th>
             <th className="text-right py-2 text-xs text-dark-400 font-heading uppercase">
               Tax (30% Net)
@@ -112,9 +111,16 @@ function MonthlyBreakdownTable({ acuityMonths, qbMonths }) {
             const ac = acuityMap[key] || {};
             const qb = qbMap[key] || {};
             const grossRev = ac.revenue || 0;
-            const qbIncome = qb.income || 0;
+            const sessions = ac.sessions || 0;
             const qbExpenses = qb.expenses || 0;
-            const netProfit = qb.netIncome || qbIncome - qbExpenses;
+
+            // Estimate Stripe fees for this month
+            const monthStripeFees =
+              Math.round(
+                (grossRev * 0.029 + sessions * 0.3) * 100
+              ) / 100;
+            const monthNetRevenue = Math.round((grossRev - monthStripeFees) * 100) / 100;
+            const monthTax = Math.round(monthNetRevenue * TAX_RATE * 100) / 100;
 
             return (
               <tr key={key} className="border-b border-dark-800">
@@ -124,27 +130,26 @@ function MonthlyBreakdownTable({ acuityMonths, qbMonths }) {
                 <td className="py-2 text-right text-green-400">
                   {formatCurrency(grossRev)}
                 </td>
-                <td className="py-2 text-right text-dark-300">
-                  {ac.sessions || "—"}
+                <td className="py-2 text-right text-red-400">
+                  {monthStripeFees > 0
+                    ? `-${formatCurrency(monthStripeFees)}`
+                    : "â"}
                 </td>
-                <td className="py-2 text-right text-green-400">
-                  {qbIncome > 0 ? formatCurrency(qbIncome) : "—"}
+                <td className="py-2 text-right text-green-300 font-medium">
+                  {monthNetRevenue > 0
+                    ? formatCurrency(monthNetRevenue)
+                    : "â"}
+                </td>
+                <td className="py-2 text-right text-dark-300">
+                  {sessions || "â"}
                 </td>
                 <td className="py-2 text-right text-red-400">
-                  {qbExpenses > 0 ? formatCurrency(qbExpenses) : "—"}
-                </td>
-                <td
-                  className={`py-2 text-right font-medium ${netProfit >= 0 ? "text-green-400" : "text-red-400"}`}
-                >
-                  {qbIncome > 0 ? formatCurrency(netProfit) : "—"}
+                  {qbExpenses > 0 ? formatCurrency(qbExpenses) : "â"}
                 </td>
                 <td className="py-2 text-right text-brand-400">
-                  {formatCurrency(grossRev * TAX_RATE)}
-                </td>
-                <td className="py-2 text-right text-brand-400">
-                  {netProfit > 0
-                    ? formatCurrency(netProfit * TAX_RATE)
-                    : "—"}
+                  {monthNetRevenue > 0
+                    ? formatCurrency(monthTax)
+                    : "â"}
                 </td>
               </tr>
             );
@@ -156,8 +161,8 @@ function MonthlyBreakdownTable({ acuityMonths, qbMonths }) {
 }
 
 function YTDSummaryBar({ label, value, target, color }) {
-  const pct = target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0;
-
+  const pct =
+    target > 0 ? Math.min(100, Math.round((value / target) * 100)) : 0;
   return (
     <div className="mb-3">
       <div className="flex justify-between text-xs mb-1">
@@ -179,19 +184,20 @@ function YTDSummaryBar({ label, value, target, color }) {
 export default function FinancesPage() {
   const [acuityYtd, setAcuityYtd] = useState(null);
   const [qbPnl, setQbPnl] = useState(null);
+  const [stripeData, setStripeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [acRes, qbRes] = await Promise.allSettled([
+    const [acRes, qbRes, stripeRes] = await Promise.allSettled([
       fetch("/api/acuity/ytd").then((r) => r.json()),
       fetch("/api/quickbooks/pnl").then((r) => r.json()),
+      fetch("/api/stripe").then((r) => r.json()),
     ]);
-
     if (acRes.status === "fulfilled") setAcuityYtd(acRes.value);
     if (qbRes.status === "fulfilled") setQbPnl(qbRes.value);
-
+    if (stripeRes.status === "fulfilled") setStripeData(stripeRes.value);
     setLastRefresh(new Date().toISOString());
     setLoading(false);
   }, []);
@@ -201,12 +207,19 @@ export default function FinancesPage() {
   }, [fetchData]);
 
   const grossRevenue = acuityYtd?.totalRevenue || 0;
+  const totalSessions = acuityYtd?.totalSessions || 0;
   const qbIncome = qbPnl?.totalIncome || 0;
   const qbExpenses = qbPnl?.totalExpenses || 0;
   const netIncome = qbPnl?.netIncome || 0;
 
+  // Stripe fee estimates from Stripe API (or calculate from Acuity data)
+  const yearStripeFees = stripeData?.yearStripeFees ||
+    Math.round((grossRevenue * 0.029 + totalSessions * 0.3) * 100) / 100;
+  const netRevenue = Math.round((grossRevenue - yearStripeFees) * 100) / 100;
+
+  // Tax reserves â based on NET revenue (after Stripe fees)
+  const netRevTax = Math.round(netRevenue * TAX_RATE * 100) / 100;
   const grossTax = Math.round(grossRevenue * TAX_RATE * 100) / 100;
-  const netTax = Math.round(Math.max(0, netIncome) * TAX_RATE * 100) / 100;
 
   // Phase 1 annual target
   const annualTarget = 108000;
@@ -219,7 +232,7 @@ export default function FinancesPage() {
             FINANCES & TAX RESERVE
           </h1>
           <p className="text-sm text-dark-400">
-            YTD P&L · 30% Tax Reserve · Turner & Costa PC Ready
+            YTD P&L Â· 30% Tax Reserve Â· Turner & Costa PC Ready
           </p>
         </div>
         <button
@@ -231,20 +244,20 @@ export default function FinancesPage() {
         </button>
       </div>
 
-      {/* Tax Reserve Cards — Side by Side */}
+      {/* Tax Reserve Cards â Side by Side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <TaxReserveCard
-          title="Tax Reserve — Gross Revenue"
-          subtitle="30% of Acuity session revenue (conservative)"
-          grossAmount={grossRevenue}
-          taxAmount={grossTax}
+          title="Tax Reserve â Net Revenue"
+          subtitle="30% of revenue after Stripe fees (recommended)"
+          grossAmount={netRevenue}
+          taxAmount={netRevTax}
           color="bg-brand-500"
         />
         <TaxReserveCard
-          title="Tax Reserve — Net Profit"
-          subtitle="30% of QuickBooks net income (after expenses)"
-          grossAmount={netIncome}
-          taxAmount={netTax}
+          title="Tax Reserve â Gross Revenue"
+          subtitle="30% of total session revenue (conservative / max safe)"
+          grossAmount={grossRevenue}
+          taxAmount={grossTax}
           color="bg-green-500"
         />
       </div>
@@ -254,22 +267,29 @@ export default function FinancesPage() {
         <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide font-heading mb-4">
           Year-to-Date Summary
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-6">
           <div>
             <p className="text-xs text-dark-400">Gross Revenue</p>
             <p className="text-2xl font-bold text-green-400 font-heading">
               {formatCurrency(grossRevenue)}
             </p>
             <p className="text-xs text-dark-500">
-              {acuityYtd?.totalSessions || 0} sessions
+              {totalSessions} sessions
             </p>
           </div>
           <div>
-            <p className="text-xs text-dark-400">QB Income</p>
-            <p className="text-2xl font-bold text-green-400 font-heading">
-              {formatCurrency(qbIncome)}
+            <p className="text-xs text-dark-400">Stripe Fees</p>
+            <p className="text-2xl font-bold text-red-400 font-heading">
+              -{formatCurrency(yearStripeFees)}
             </p>
-            <p className="text-xs text-dark-500">QuickBooks recorded</p>
+            <p className="text-xs text-dark-500">2.9% + $0.30/txn</p>
+          </div>
+          <div>
+            <p className="text-xs text-dark-400">Net Revenue</p>
+            <p className="text-2xl font-bold text-green-300 font-heading">
+              {formatCurrency(netRevenue)}
+            </p>
+            <p className="text-xs text-dark-500">After Stripe fees</p>
           </div>
           <div>
             <p className="text-xs text-dark-400">Expenses</p>
@@ -281,11 +301,15 @@ export default function FinancesPage() {
           <div>
             <p className="text-xs text-dark-400">Net Profit</p>
             <p
-              className={`text-2xl font-bold font-heading ${netIncome >= 0 ? "text-green-400" : "text-red-400"}`}
+              className={`text-2xl font-bold font-heading ${
+                netRevenue - qbExpenses >= 0
+                  ? "text-green-400"
+                  : "text-red-400"
+              }`}
             >
-              {formatCurrency(netIncome)}
+              {formatCurrency(netRevenue - qbExpenses)}
             </p>
-            <p className="text-xs text-dark-500">After expenses</p>
+            <p className="text-xs text-dark-500">Net rev - expenses</p>
           </div>
         </div>
 
@@ -306,9 +330,9 @@ export default function FinancesPage() {
         <p className="text-xs text-dark-400 mb-4">
           You should set aside between{" "}
           <span className="text-brand-400 font-medium">
-            {formatCurrency(netTax)}
+            {formatCurrency(netRevTax)}
           </span>{" "}
-          (conservative, based on net profit) and{" "}
+          (based on net revenue after Stripe fees) and{" "}
           <span className="text-brand-400 font-medium">
             {formatCurrency(grossTax)}
           </span>{" "}
@@ -316,9 +340,9 @@ export default function FinancesPage() {
         </p>
         <div className="bg-dark-800 rounded-lg p-4 flex items-center justify-between">
           <div className="text-center">
-            <p className="text-xs text-dark-500">Min Reserve (Net)</p>
+            <p className="text-xs text-dark-500">Min Reserve (Net Rev)</p>
             <p className="text-xl font-bold text-green-400 font-heading">
-              {formatCurrency(netTax)}
+              {formatCurrency(netRevTax)}
             </p>
           </div>
           <div className="flex-1 mx-4">
@@ -342,6 +366,7 @@ export default function FinancesPage() {
       <MonthlyBreakdownTable
         acuityMonths={acuityYtd?.months}
         qbMonths={qbPnl?.months}
+        stripeData={stripeData}
       />
 
       {/* CPA Note */}
@@ -368,9 +393,11 @@ export default function FinancesPage() {
             </p>
             <p className="text-xs text-dark-400 mt-1">
               This data auto-syncs from Acuity (session bookings) and
-              QuickBooks (P&L). The 30% tax reserve is a conservative estimate.
+              QuickBooks (P&L). Stripe fees are estimated at 2.9% + $0.30 per
+              transaction. The 30% tax reserve is a conservative estimate.
               Consult Turner & Costa for your actual tax obligation based on
-              deductions, self-employment tax, and quarterly estimated payments.
+              deductions, self-employment tax, and quarterly estimated
+              payments.
             </p>
           </div>
         </div>
