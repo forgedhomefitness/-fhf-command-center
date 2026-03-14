@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-// ── Upstash Redis helpers (shared with main QB route) ──────────
+// ââ Upstash Redis helpers (shared with main QB route) ââââââââââ
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -81,10 +81,39 @@ async function callQBApi(url, accessToken) {
   });
 }
 
-// ── Parse QB P&L report with monthly columns ───────────────────
+// ââ Helper: check if a group name is an expense group âââââââââ
+function isExpenseGroup(groupName) {
+  if (!groupName) return false;
+  const lower = groupName.toLowerCase();
+  return (
+    lower === "expenses" ||
+    lower === "expense" ||
+    lower === "total expenses" ||
+    lower === "total expense" ||
+    lower.startsWith("expense")
+  );
+}
+
+function isIncomeGroup(groupName) {
+  if (!groupName) return false;
+  const lower = groupName.toLowerCase();
+  return (
+    lower === "income" ||
+    lower === "total income" ||
+    lower === "revenue" ||
+    lower === "total revenue" ||
+    lower.startsWith("income")
+  );
+}
+
+// ââ Parse QB P&L report with monthly columns âââââââââââââââââ
 function parseMonthlyPnL(data) {
   const columns = data?.Columns?.Column || [];
   const rows = data?.Rows?.Row || [];
+
+  // Log raw group names for debugging
+  const groupNames = rows.map((r) => r.group).filter(Boolean);
+  console.log("QB P&L group names found:", groupNames);
 
   const monthLabels = columns
     .slice(1)
@@ -105,7 +134,7 @@ function parseMonthlyPnL(data) {
     if (row.Summary) {
       const cols = row.Summary.ColData || [];
 
-      if (row.group === "Income") {
+      if (isIncomeGroup(row.group)) {
         for (let i = 1; i < cols.length; i++) {
           const val = parseFloat(cols[i].value) || 0;
           if (i - 1 < months.length) {
@@ -116,13 +145,78 @@ function parseMonthlyPnL(data) {
         }
       }
 
-      if (row.group === "Expenses") {
+      if (isExpenseGroup(row.group)) {
         for (let i = 1; i < cols.length; i++) {
           const val = parseFloat(cols[i].value) || 0;
           if (i - 1 < months.length) {
             months[i - 1].expenses = val;
           } else {
             totalExpenses = val;
+          }
+        }
+      }
+    }
+
+    // Also check for nested rows within expense groups that have
+    // their own Summary (sub-categories like "Auto", "Gas", etc.)
+    if (isExpenseGroup(row.group) && row.Rows?.Row) {
+      for (const sub of row.Rows.Row) {
+        if (sub.Summary) {
+          const subCols = sub.Summary.ColData || [];
+          for (let i = 1; i < subCols.length; i++) {
+            const val = parseFloat(subCols[i].value) || 0;
+            // Sub-row values are already included in parent Summary,
+            // so we only need this if parent Summary was missing
+          }
+        }
+      }
+    }
+  }
+
+  // If we still have no expenses from Summary rows, try to sum from
+  // individual sub-rows (fallback for unusual QB report structures)
+  if (totalExpenses === 0 && months.every((m) => m.expenses === 0)) {
+    console.log("QB P&L: No expenses found in Summary rows, trying sub-rows...");
+    for (const row of rows) {
+      if (isExpenseGroup(row.group) && row.Rows?.Row) {
+        for (const sub of row.Rows.Row) {
+          // Direct ColData rows (leaf expense items)
+          if (sub.ColData) {
+            for (let i = 1; i < sub.ColData.length; i++) {
+              const val = parseFloat(sub.ColData[i].value) || 0;
+              if (i - 1 < months.length) {
+                months[i - 1].expenses += val;
+              } else {
+                totalExpenses += val;
+              }
+            }
+          }
+          // Nested sub-category rows
+          if (sub.Rows?.Row) {
+            for (const nested of sub.Rows.Row) {
+              if (nested.ColData) {
+                for (let i = 1; i < nested.ColData.length; i++) {
+                  const val = parseFloat(nested.ColData[i].value) || 0;
+                  if (i - 1 < months.length) {
+                    months[i - 1].expenses += val;
+                  } else {
+                    totalExpenses += val;
+                  }
+                }
+              }
+            }
+          }
+          // Sub-row with its own Summary
+          if (sub.Summary) {
+            const subCols = sub.Summary.ColData || [];
+            for (let i = 1; i < subCols.length; i++) {
+              const val = parseFloat(subCols[i].value) || 0;
+              if (i - 1 < months.length) {
+                months[i - 1].expenses += val;
+              } else {
+                totalExpenses += val;
+              }
+            }
           }
         }
       }
@@ -145,10 +239,11 @@ function parseMonthlyPnL(data) {
     totalIncome,
     totalExpenses,
     netIncome: totalIncome - totalExpenses,
+    _debug: { groupNames },
   };
 }
 
-// ── Main route — YTD P&L with monthly breakdown ────────────────
+// ââ Main route â YTD P&L with monthly breakdown ââââââââââââââ
 export async function GET() {
   const realmId = process.env.QB_REALM_ID;
   if (!realmId) {
@@ -185,7 +280,6 @@ export async function GET() {
 
     const data = await res.json();
     const parsed = parseMonthlyPnL(data);
-
     const TAX_RATE = 0.3;
 
     return NextResponse.json({
