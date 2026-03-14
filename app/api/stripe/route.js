@@ -42,6 +42,29 @@ export async function GET() {
         .filter((c) => c.status === "succeeded")
         .reduce((sum, c) => sum + c.amount, 0) / 100;
 
+    const countSucceeded = (charges) =>
+      charges.data.filter((c) => c.status === "succeeded").length;
+
+    // Gross revenue
+    const monthRevenue = sumSucceeded(monthCharges);
+    const yearRevenue = sumSucceeded(yearCharges);
+
+    // Charge counts (for $0.30/transaction fee)
+    const monthChargeCount = countSucceeded(monthCharges);
+    const yearChargeCount = countSucceeded(yearCharges);
+
+    // Stripe fee estimates: 2.9% + $0.30 per transaction
+    const monthStripeFees =
+      Math.round((monthRevenue * 0.029 + monthChargeCount * 0.3) * 100) / 100;
+    const yearStripeFees =
+      Math.round((yearRevenue * 0.029 + yearChargeCount * 0.3) * 100) / 100;
+
+    // Net revenue (after Stripe fees)
+    const monthNetRevenue =
+      Math.round((monthRevenue - monthStripeFees) * 100) / 100;
+    const yearNetRevenue =
+      Math.round((yearRevenue - yearStripeFees) * 100) / 100;
+
     const recentCharges = monthCharges.data
       .filter((c) => c.status === "succeeded")
       .slice(0, 10)
@@ -54,8 +77,14 @@ export async function GET() {
       }));
 
     return NextResponse.json({
-      monthRevenue: sumSucceeded(monthCharges),
-      yearRevenue: sumSucceeded(yearCharges),
+      monthRevenue,
+      yearRevenue,
+      monthNetRevenue,
+      yearNetRevenue,
+      monthStripeFees,
+      yearStripeFees,
+      monthChargeCount,
+      yearChargeCount,
       customerCount: customers.data.length,
       recentCharges,
       lastFetched: new Date().toISOString(),
