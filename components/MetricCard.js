@@ -9,6 +9,7 @@ export default function MetricCard({
   format = "currency",
   icon,
   trend,
+  subtitle,
   loading,
 }) {
   if (loading) {
@@ -25,6 +26,7 @@ export default function MetricCard({
     format === "currency"
       ? formatCurrency(value || 0)
       : (value || 0).toLocaleString();
+
   const pct = target ? progressPercent(value || 0, target) : null;
 
   return (
@@ -35,7 +37,7 @@ export default function MetricCard({
         </span>
         {icon && <span className="text-lg">{icon}</span>}
       </div>
-      <div className="flex items-end gap-2 mb-2">
+      <div className="flex items-end gap-2 mb-1">
         <span className="text-2xl font-bold text-white">{displayValue}</span>
         {target && (
           <span className="text-sm text-dark-400 mb-0.5">
@@ -43,13 +45,13 @@ export default function MetricCard({
           </span>
         )}
       </div>
+      {subtitle && (
+        <p className="text-xs text-green-300 font-medium mb-1">{subtitle}</p>
+      )}
       {pct !== null && (
         <div>
           <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${pct}%` }}
-            />
+            <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <div className="flex justify-between mt-1">
             <span className="text-xs text-dark-500">{pct}% of target</span>
