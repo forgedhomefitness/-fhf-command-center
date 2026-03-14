@@ -42,7 +42,7 @@ function WingateCountdown() {
         </span>
       </div>
       <p className="text-xs text-dark-400 mb-3">
-        July 1, 2026 · ~$2,600/mo guaranteed
+        July 1, 2026 Â· ~$2,600/mo guaranteed
       </p>
       <div className="w-full bg-dark-700 rounded-full h-2 mb-4">
         <div
@@ -110,8 +110,8 @@ function SessionPaceTracker({ weekSessions, lastWeekSessions }) {
             pct >= 80
               ? "text-green-400 bg-green-500/10"
               : pct >= 50
-              ? "text-yellow-400 bg-yellow-500/10"
-              : "text-red-400 bg-red-500/10"
+                ? "text-yellow-400 bg-yellow-500/10"
+                : "text-red-400 bg-red-500/10"
           }`}
         >
           {pct >= 80 ? "On Track" : pct >= 50 ? "Behind" : "At Risk"}
@@ -163,6 +163,7 @@ export default function Dashboard() {
       fetch("/api/quickbooks").then((r) => r.json()),
       fetch("/api/instagram").then((r) => r.json()),
     ]);
+
     if (stripeRes.status === "fulfilled") setStripe(stripeRes.value);
     if (acuityRes.status === "fulfilled") setAcuity(acuityRes.value);
     if (qbRes.status === "fulfilled") setQuickbooks(qbRes.value);
@@ -170,7 +171,6 @@ export default function Dashboard() {
 
     const savedReviews = localStorage.getItem("fhf-google-reviews");
     setGoogleReviews(savedReviews ? parseInt(savedReviews) : 0);
-
     setLastRefresh(new Date().toISOString());
     setLoading(false);
   }, []);
@@ -186,6 +186,17 @@ export default function Dashboard() {
     setGoogleReviews(n);
     localStorage.setItem("fhf-google-reviews", String(n));
   }
+
+  // Calculate net revenue for Year Revenue card
+  const yearGross = stripe?.yearRevenue || 0;
+  const yearNet = stripe?.yearNetRevenue || 0;
+
+  // Calculate net for weekly revenue
+  const weekGross = acuity?.weekRevenue ?? 0;
+  const weekSessions = acuity?.weekSessions ?? 0;
+  const weekStripeFees =
+    Math.round((weekGross * 0.029 + weekSessions * 0.3) * 100) / 100;
+  const weekNet = Math.round((weekGross - weekStripeFees) * 100) / 100;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -228,9 +239,10 @@ export default function Dashboard() {
         />
         <MetricCard
           label="Year Revenue"
-          value={stripe?.yearRevenue}
+          value={yearGross}
           target={108000}
           format="currency"
+          subtitle={yearNet > 0 ? `Net: $${Math.round(yearNet).toLocaleString()}` : null}
           loading={loading && !stripe}
         />
         <MetricCard
@@ -287,20 +299,23 @@ export default function Dashboard() {
           <div className="flex items-end gap-2 mb-2">
             <span className="text-3xl font-bold text-brand-400">
               {Math.ceil(
-                (new Date("2026-07-01") - new Date()) / (1000 * 60 * 60 * 24)
+                (new Date("2026-07-01") - new Date()) /
+                  (1000 * 60 * 60 * 24)
               )}
             </span>
             <span className="text-dark-400 text-sm mb-1">days</span>
           </div>
-          <p className="text-xs text-dark-500">July 1, 2026 · +$2,600/mo</p>
+          <p className="text-xs text-dark-500">July 1, 2026 Â· +$2,600/mo</p>
         </div>
       </div>
 
       {/* Weekly Revenue Goal */}
       <div className="mb-6">
         <WeeklyRevenueGoal
-          weekRevenue={acuity?.weekRevenue ?? 0}
-          weekSessions={acuity?.weekSessions ?? 0}
+          weekRevenue={weekGross}
+          weekSessions={weekSessions}
+          weekNetRevenue={weekNet}
+          weekStripeFees={weekStripeFees}
         />
       </div>
 
@@ -334,7 +349,7 @@ export default function Dashboard() {
           {quickbooks?.connected && (
             <div className="card">
               <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-4">
-                QuickBooks P&L — {quickbooks.period}
+                QuickBooks P&L â {quickbooks.period}
               </h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -372,7 +387,7 @@ export default function Dashboard() {
           {instagram?.connected && (
             <div className="card">
               <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-3">
-                Instagram — @{instagram.username}
+                Instagram â @{instagram.username}
               </h3>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -400,7 +415,7 @@ export default function Dashboard() {
                         {post.caption || "No caption"}
                       </p>
                       <p className="text-dark-500 mt-1">
-                        {post.likes} likes · {post.comments} comments
+                        {post.likes} likes Â· {post.comments} comments
                       </p>
                     </div>
                   ))}
