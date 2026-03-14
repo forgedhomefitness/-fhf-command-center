@@ -15,33 +15,48 @@ function getCurrentPhase() {
   return 3;
 }
 
-export default function WeeklyRevenueGoal({ weekRevenue = 0, weekSessions = 0 }) {
+export default function WeeklyRevenueGoal({
+  weekRevenue = 0,
+  weekSessions = 0,
+  weekNetRevenue = 0,
+  weekStripeFees = 0,
+}) {
   const phaseIndex = getCurrentPhase();
   const phase = PHASES[phaseIndex];
   const target = phase.weekly;
   const pct = Math.min(100, Math.round((weekRevenue / target) * 100));
   const remaining = Math.max(0, target - weekRevenue);
-
-  const avgPerSession = weekSessions > 0 ? Math.round(weekRevenue / weekSessions) : 130;
-  const sessionsNeeded = remaining > 0 ? Math.ceil(remaining / avgPerSession) : 0;
+  const avgPerSession =
+    weekSessions > 0 ? Math.round(weekRevenue / weekSessions) : 130;
+  const sessionsNeeded =
+    remaining > 0 ? Math.ceil(remaining / avgPerSession) : 0;
 
   const statusColor =
-    pct >= 100 ? "text-green-400 bg-green-500/10" :
-    pct >= 75 ? "text-brand-400 bg-brand-500/10" :
-    pct >= 50 ? "text-yellow-400 bg-yellow-500/10" :
-    "text-red-400 bg-red-500/10";
+    pct >= 100
+      ? "text-green-400 bg-green-500/10"
+      : pct >= 75
+        ? "text-brand-400 bg-brand-500/10"
+        : pct >= 50
+          ? "text-yellow-400 bg-yellow-500/10"
+          : "text-red-400 bg-red-500/10";
 
   const statusText =
-    pct >= 100 ? "Goal Hit" :
-    pct >= 75 ? "Almost There" :
-    pct >= 50 ? "On Pace" :
-    "Behind";
+    pct >= 100
+      ? "Goal Hit"
+      : pct >= 75
+        ? "Almost There"
+        : pct >= 50
+          ? "On Pace"
+          : "Behind";
 
   const barColor =
-    pct >= 100 ? "bg-green-500" :
-    pct >= 75 ? "bg-brand-500" :
-    pct >= 50 ? "bg-yellow-500" :
-    "bg-red-500";
+    pct >= 100
+      ? "bg-green-500"
+      : pct >= 75
+        ? "bg-brand-500"
+        : pct >= 50
+          ? "bg-yellow-500"
+          : "bg-red-500";
 
   return (
     <div className="card">
@@ -49,11 +64,14 @@ export default function WeeklyRevenueGoal({ weekRevenue = 0, weekSessions = 0 })
         <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide">
           Weekly Revenue Goal
         </h3>
-        <span className={`text-xs font-medium px-2 py-1 rounded ${statusColor}`}>
+        <span
+          className={`text-xs font-medium px-2 py-1 rounded ${statusColor}`}
+        >
           {statusText}
         </span>
       </div>
 
+      {/* Gross Revenue */}
       <div className="flex items-end gap-3 mb-1">
         <span className="text-3xl font-bold text-white">
           ${weekRevenue.toLocaleString()}
@@ -63,8 +81,22 @@ export default function WeeklyRevenueGoal({ weekRevenue = 0, weekSessions = 0 })
         </span>
       </div>
 
+      {/* Net Revenue line */}
+      {weekNetRevenue > 0 && (
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm text-green-300 font-medium">
+            Net: ${weekNetRevenue.toLocaleString()}
+          </span>
+          {weekStripeFees > 0 && (
+            <span className="text-xs text-dark-500">
+              (Stripe fees: -${weekStripeFees.toLocaleString()})
+            </span>
+          )}
+        </div>
+      )}
+
       <p className="text-xs text-dark-500 mb-3">
-        {phase.name} ({phase.year}) · ${phase.annual.toLocaleString()}/yr
+        {phase.name} ({phase.year}) Â· ${phase.annual.toLocaleString()}/yr
       </p>
 
       {/* Progress bar */}
@@ -89,8 +121,10 @@ export default function WeeklyRevenueGoal({ weekRevenue = 0, weekSessions = 0 })
           <p className="text-[10px] text-dark-400 uppercase">Avg/Session</p>
         </div>
         <div className="bg-dark-800/50 rounded-lg p-2 text-center">
-          <p className={`text-lg font-bold ${remaining > 0 ? "text-brand-400" : "text-green-400"}`}>
-            {remaining > 0 ? sessionsNeeded : "✓"}
+          <p
+            className={`text-lg font-bold ${remaining > 0 ? "text-brand-400" : "text-green-400"}`}
+          >
+            {remaining > 0 ? sessionsNeeded : "\u2713"}
           </p>
           <p className="text-[10px] text-dark-400 uppercase">
             {remaining > 0 ? "Sessions Left" : "Complete"}
@@ -101,21 +135,31 @@ export default function WeeklyRevenueGoal({ weekRevenue = 0, weekSessions = 0 })
       {/* Remaining amount */}
       {remaining > 0 && (
         <p className="text-xs text-dark-400">
-          <span className="text-brand-400 font-semibold">${remaining.toLocaleString()}</span> more to hit this week's target
+          <span className="text-brand-400 font-semibold">
+            ${remaining.toLocaleString()}
+          </span>{" "}
+          more to hit this week's target
           {sessionsNeeded > 0 && (
-            <span> · ~{sessionsNeeded} more session{sessionsNeeded > 1 ? "s" : ""} at ${avgPerSession}/avg</span>
+            <span>
+              {" "}
+              Â· ~{sessionsNeeded} more session
+              {sessionsNeeded > 1 ? "s" : ""} at ${avgPerSession}/avg
+            </span>
           )}
         </p>
       )}
       {pct >= 100 && (
         <p className="text-xs text-green-400 font-semibold">
-          Week target exceeded by ${(weekRevenue - target).toLocaleString()}
+          Week target exceeded by $
+          {(weekRevenue - target).toLocaleString()}
         </p>
       )}
 
       {/* Phase roadmap mini */}
       <div className="mt-4 pt-3 border-t border-dark-700">
-        <p className="text-[10px] text-dark-500 uppercase tracking-wide mb-2">5-Year Weekly Targets</p>
+        <p className="text-[10px] text-dark-500 uppercase tracking-wide mb-2">
+          5-Year Weekly Targets
+        </p>
         <div className="flex gap-1">
           {PHASES.map((p, i) => (
             <div
@@ -124,11 +168,13 @@ export default function WeeklyRevenueGoal({ weekRevenue = 0, weekSessions = 0 })
                 i === phaseIndex
                   ? "bg-brand-500/20 text-brand-400 font-bold border border-brand-500/30"
                   : i < phaseIndex
-                  ? "bg-green-500/10 text-green-500/60"
-                  : "bg-dark-800 text-dark-500"
+                    ? "bg-green-500/10 text-green-500/60"
+                    : "bg-dark-800 text-dark-500"
               }`}
             >
-              <div className="font-semibold">${p.weekly.toLocaleString()}</div>
+              <div className="font-semibold">
+                ${p.weekly.toLocaleString()}
+              </div>
               <div className="opacity-70">{p.year}</div>
             </div>
           ))}
