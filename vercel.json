@@ -7,6 +7,10 @@
     {
       "path": "/api/reports/weekly?tz=est",
       "schedule": "45 10 * * 6"
+    },
+    {
+      "path": "/api/quickbooks/keepalive",
+      "schedule": "0 10 * * *"
     }
   ]
 }
