@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 const INTEGRATIONS = [
@@ -73,7 +73,7 @@ const INTEGRATIONS = [
   },
 ];
 
-export default function Settings() {
+function SettingsContent() {
   const [statuses, setStatuses] = useState({});
   const searchParams = useSearchParams();
   const qbParam = searchParams.get("qb");
@@ -255,5 +255,13 @@ export default function Settings() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function Settings() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#001F3F] text-white p-8">Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
   );
 }
