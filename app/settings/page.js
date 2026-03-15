@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 const INTEGRATIONS = [
   {
@@ -40,7 +41,7 @@ const INTEGRATIONS = [
       "Go to developer.intuit.com → your app → Sandbox/Production",
       "Copy your Access Token and Company ID (Realm ID)",
       "Add as QB_ACCESS_TOKEN and QB_REALM_ID in Vercel",
-      "Note: Token expires every 60 days — refresh at developer.intuit.com",
+      "Token auto-refreshes daily via keepalive cron. Click Reconnect above if connection fails.",
     ],
   },
   {
@@ -74,6 +75,26 @@ const INTEGRATIONS = [
 
 export default function Settings() {
   const [statuses, setStatuses] = useState({});
+  const searchParams = useSearchParams();
+  const qbParam = searchParams.get("qb");
+  const [qbMessage, setQbMessage] = useState(null);
+
+  useEffect(() => {
+
+          {qbMessage && (
+            <div className={`mb-4 p-3 rounded-lg text-sm ${qbMessage.type === "success" ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-red-500/20 text-red-400 border border-red-500/30"}`}>
+              {qbMessage.text}
+            </div>
+          )}
+    if (qbParam === "connected") {
+      setQbMessage({ type: "success", text: "QuickBooks reconnected successfully!" });
+      window.history.replaceState({}, "", "/settings");
+    } else if (qbParam === "error") {
+      const reason = searchParams.get("reason") || "unknown";
+      setQbMessage({ type: "error", text: "QuickBooks reconnection failed: " + reason });
+    }
+  }, [qbParam, searchParams]);
+
   const [testing, setTesting] = useState({});
 
   async function testConnection(integration) {
