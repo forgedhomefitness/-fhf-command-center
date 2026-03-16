@@ -7,6 +7,7 @@ import DailyBriefing from "@/components/DailyBriefing";
 import RecentTransactions from "@/components/RecentTransactions";
 import UpcomingSessions from "@/components/UpcomingSessions";
 import WeeklyRevenueGoal from "@/components/WeeklyRevenueGoal";
+import MonthlyRevenue from "@/components/MonthlyRevenue";
 import WebsiteVisits from "@/components/WebsiteVisits";
 import { timeAgo } from "@/lib/utils";
 
@@ -222,6 +223,13 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Monthly Revenue â Top of Dashboard */}
+      <MonthlyRevenue
+        acuityData={acuity}
+        stripeData={stripe}
+        loading={loading && !acuity && !stripe}
+      />
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
