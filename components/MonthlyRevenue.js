@@ -17,7 +17,7 @@ function getCurrentPhase() {
   return 4;
 }
 
-function MonthlyCard({ label, amount, target, color, icon, subtitle }) {
+function MonthlyCard({ label, amount, target, color, subtitle }) {
   const pct = target > 0 ? Math.min(100, Math.round((amount / target) * 100)) : 0;
 
   const barColor =
@@ -40,12 +40,9 @@ function MonthlyCard({ label, amount, target, color, icon, subtitle }) {
 
   return (
     <div className={`rounded-xl border p-5 ${color}`}>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">{icon}</span>
-        <span className="text-xs font-semibold text-dark-300 uppercase tracking-wide">
-          {label}
-        </span>
-      </div>
+      <p className="text-xs font-semibold text-dark-300 uppercase tracking-wide mb-3">
+        {label}
+      </p>
       <div className="mb-1">
         <span className="text-3xl font-bold text-white">
           ${amount.toLocaleString()}
@@ -68,8 +65,7 @@ function MonthlyCard({ label, amount, target, color, icon, subtitle }) {
       </div>
     </div>
   );
-}
-
+        }
 export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
   if (loading) {
     return (
@@ -105,7 +101,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           {monthName} Revenue
         </h2>
         <span className="text-xs text-dark-500">
-          Day {dayOfMonth} of {daysInMonth} Â· {daysLeft} days left
+          Day {dayOfMonth} of {daysInMonth} - {daysLeft} days left
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -114,7 +110,6 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           amount={monthEarned}
           target={monthTarget}
           color="border-dark-700 bg-dark-800/60"
-          icon="ð°"
           subtitle={`${monthSessions} sessions completed`}
         />
         <MonthlyCard
@@ -122,7 +117,6 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           amount={monthProjected}
           target={monthTarget}
           color="border-brand-500/30 bg-brand-500/5"
-          icon="ð"
           subtitle={`Earned + ${monthSessions > 0 ? "scheduled" : "upcoming"} sessions`}
         />
         <MonthlyCard
@@ -130,8 +124,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           amount={monthTarget}
           target={monthTarget}
           color="border-dark-600 bg-dark-800/40"
-          icon="ð¯"
-          subtitle={`${phase.name} Â· $${phase.annual.toLocaleString()}/yr`}
+          subtitle={`${phase.name} - $${phase.annual.toLocaleString()}/yr`}
         />
       </div>
     </div>
