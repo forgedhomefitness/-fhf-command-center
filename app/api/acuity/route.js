@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 
 const ACUITY_BASE = "https://acuityscheduling.com/api/v1";
 
-// ORDER MATTERS — more specific keys must come before generic ones
-// "Private Session" is a substring of "Back to Back Private Session"
-// so Back to Back must be listed first
+// Fallback PRICE_MAP -- only used when Acuity does not have a price on the appointment
+// ORDER MATTERS -- more specific keys must come before generic ones
 const PRICE_MAP = {
   "Back to Back Private Session": 205,
   "Group Training": 205,
@@ -15,12 +14,21 @@ const PRICE_MAP = {
 };
 
 function getPriceForAppointment(appt) {
+  // PRIMARY: Use the actual price from Acuity (what was actually charged)
+  // Acuity stores price as a string like "130.00" or "0.00"
+  if (appt.price !== undefined && appt.price !== null && appt.price !== "") {
+    const actualPrice = parseFloat(appt.price);
+    if (!isNaN(actualPrice)) {
+      return actualPrice;
+    }
+  }
+
+  // FALLBACK: If Acuity has no price field, use type-based lookup
   if (!appt.type) return 130;
   const type = appt.type.toLowerCase();
 
   // Free evaluations and complimentary sessions = $0
-  if (type.includes("free") || type.includes("complimentary") || type.includes("evaluation"))
-    return 0;
+  if (type.includes("free") || type.includes("complimentary") || type.includes("evaluation")) return 0;
 
   for (const [key, price] of Object.entries(PRICE_MAP)) {
     if (type.includes(key.toLowerCase())) {
@@ -39,12 +47,12 @@ async function acuityGet(endpoint) {
     headers: { Authorization: `Basic ${credentials}` },
     cache: "no-store",
   });
+
   if (!res.ok) {
     throw new Error(`Acuity API error: ${res.status}`);
   }
   return res.json();
 }
-
 export async function GET() {
   if (!process.env.ACUITY_USER_ID || !process.env.ACUITY_API_KEY) {
     return NextResponse.json(
@@ -83,13 +91,19 @@ export async function GET() {
     const lastWeekEnd = lastSunday.toISOString().split("T")[0];
     const monthStartStr = monthStart.toISOString().split("T")[0];
     const monthEndStr = monthEnd.toISOString().split("T")[0];
-
-    const [weekAppts, lastWeekAppts, upcoming, monthAppts] = await Promise.all([
-      acuityGet(`/appointments?minDate=${weekStart}&maxDate=${weekEnd}&max=100`),
-      acuityGet(`/appointments?minDate=${lastWeekStart}&maxDate=${lastWeekEnd}&max=100`),
-      acuityGet(`/appointments?minDate=${today}&max=20&direction=ASC`),
-      acuityGet(`/appointments?minDate=${monthStartStr}&maxDate=${monthEndStr}&max=200`),
-    ]);
+    const [weekAppts, lastWeekAppts, upcoming, monthAppts] =
+      await Promise.all([
+        acuityGet(
+          `/appointments?minDate=${weekStart}&maxDate=${weekEnd}&max=100`
+        ),
+        acuityGet(
+          `/appointments?minDate=${lastWeekStart}&maxDate=${lastWeekEnd}&max=100`
+        ),
+        acuityGet(`/appointments?minDate=${today}&max=20&direction=ASC`),
+        acuityGet(
+          `/appointments?minDate=${monthStartStr}&maxDate=${monthEndStr}&max=200`
+        ),
+      ]);
 
     const activeWeekAppts = weekAppts.filter((a) => !a.canceled);
     const weekSessions = activeWeekAppts.length;
@@ -106,6 +120,7 @@ export async function GET() {
     );
 
     const monthScheduledAppts = monthAppts.filter((a) => !a.canceled);
+
     const monthProjectedRevenue = monthScheduledAppts.reduce((sum, appt) => {
       return sum + getPriceForAppointment(appt);
     }, 0);
@@ -118,7 +133,6 @@ export async function GET() {
     const monthRemainingRevenue = monthScheduledAppts
       .filter((a) => new Date(a.datetime).getTime() >= nowMs)
       .reduce((sum, appt) => sum + getPriceForAppointment(appt), 0);
-
     const upcomingFormatted = upcoming
       .filter((a) => !a.canceled)
       .slice(0, 10)
