@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   "/api/acuity",
   "/api/quickbooks",
   "/api/stripe",
+  "/api/analytics",
 ];
 
 export async function middleware(request) {
