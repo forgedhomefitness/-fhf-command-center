@@ -105,7 +105,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           {monthName} Revenue
         </h2>
         <span className="text-xs text-dark-500">
-          Day {dayOfMonth} of {daysInMonth} · {daysLeft} days left
+          Day {dayOfMonth} of {daysInMonth} Â· {daysLeft} days left
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -114,7 +114,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           amount={monthEarned}
           target={monthTarget}
           color="border-dark-700 bg-dark-800/60"
-          icon="\u{1F4B0}"
+          icon="ð°"
           subtitle={`${monthSessions} sessions completed`}
         />
         <MonthlyCard
@@ -122,7 +122,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           amount={monthProjected}
           target={monthTarget}
           color="border-brand-500/30 bg-brand-500/5"
-          icon="\u{1F4C8}"
+          icon="ð"
           subtitle={`Earned + ${monthSessions > 0 ? "scheduled" : "upcoming"} sessions`}
         />
         <MonthlyCard
@@ -130,8 +130,8 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           amount={monthTarget}
           target={monthTarget}
           color="border-dark-600 bg-dark-800/40"
-          icon="\u{1F3AF}"
-          subtitle={`${phase.name} · $${phase.annual.toLocaleString()}/yr`}
+          icon="ð¯"
+          subtitle={`${phase.name} Â· $${phase.annual.toLocaleString()}/yr`}
         />
       </div>
     </div>
