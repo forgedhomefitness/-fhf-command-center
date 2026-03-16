@@ -96,7 +96,7 @@ export default function WeeklyRevenueGoal({
       )}
 
       <p className="text-xs text-dark-500 mb-3">
-        {phase.name} ({phase.year}) Â· ${phase.annual.toLocaleString()}/yr
+        {phase.name} ({phase.year}) · ${phase.annual.toLocaleString()}/yr
       </p>
 
       {/* Progress bar */}
@@ -114,7 +114,7 @@ export default function WeeklyRevenueGoal({
       <div className="grid grid-cols-3 gap-3 mb-3">
         <div className="bg-dark-800/50 rounded-lg p-2 text-center">
           <p className="text-lg font-bold text-white">{weekSessions}</p>
-          <p className="text-[10px] text-dark-400 uppercase">Sessions</p>
+          <p className="text-[10px] text-dark-400 uppercase">Booked This Week</p>
         </div>
         <div className="bg-dark-800/50 rounded-lg p-2 text-center">
           <p className="text-lg font-bold text-white">${avgPerSession}</p>
@@ -127,7 +127,7 @@ export default function WeeklyRevenueGoal({
             {remaining > 0 ? sessionsNeeded : "\u2713"}
           </p>
           <p className="text-[10px] text-dark-400 uppercase">
-            {remaining > 0 ? "Sessions Left" : "Complete"}
+            {remaining > 0 ? "Still Need to Hit Goal" : "Goal Hit!"}
           </p>
         </div>
       </div>
@@ -142,7 +142,7 @@ export default function WeeklyRevenueGoal({
           {sessionsNeeded > 0 && (
             <span>
               {" "}
-              Â· ~{sessionsNeeded} more session
+              · ~{sessionsNeeded} more session
               {sessionsNeeded > 1 ? "s" : ""} at ${avgPerSession}/avg
             </span>
           )}
