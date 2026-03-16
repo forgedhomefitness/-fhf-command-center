@@ -7,6 +7,7 @@ import DailyBriefing from "@/components/DailyBriefing";
 import RecentTransactions from "@/components/RecentTransactions";
 import UpcomingSessions from "@/components/UpcomingSessions";
 import WeeklyRevenueGoal from "@/components/WeeklyRevenueGoal";
+import WebsiteVisits from "@/components/WebsiteVisits";
 import { timeAgo } from "@/lib/utils";
 
 const REFRESH_INTERVAL = 30 * 60 * 1000;
@@ -151,26 +152,26 @@ export default function Dashboard() {
   const [acuity, setAcuity] = useState(null);
   const [quickbooks, setQuickbooks] = useState(null);
   const [instagram, setInstagram] = useState(null);
-  const [googleReviews, setGoogleReviews] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [stripeRes, acuityRes, qbRes, igRes] = await Promise.allSettled([
+    const [stripeRes, acuityRes, qbRes, igRes, analyticsRes] = await Promise.allSettled([
       fetch("/api/stripe").then((r) => r.json()),
       fetch("/api/acuity").then((r) => r.json()),
       fetch("/api/quickbooks").then((r) => r.json()),
       fetch("/api/instagram").then((r) => r.json()),
+      fetch("/api/analytics").then((r) => r.json()),
     ]);
 
     if (stripeRes.status === "fulfilled") setStripe(stripeRes.value);
     if (acuityRes.status === "fulfilled") setAcuity(acuityRes.value);
     if (qbRes.status === "fulfilled") setQuickbooks(qbRes.value);
     if (igRes.status === "fulfilled") setInstagram(igRes.value);
+    if (analyticsRes.status === "fulfilled") setAnalytics(analyticsRes.value);
 
-    const savedReviews = localStorage.getItem("fhf-google-reviews");
-    setGoogleReviews(savedReviews ? parseInt(savedReviews) : 0);
     setLastRefresh(new Date().toISOString());
     setLoading(false);
   }, []);
@@ -180,12 +181,6 @@ export default function Dashboard() {
     const interval = setInterval(fetchAll, REFRESH_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchAll]);
-
-  function updateGoogleReviews(val) {
-    const n = parseInt(val) || 0;
-    setGoogleReviews(n);
-    localStorage.setItem("fhf-google-reviews", String(n));
-  }
 
   // Calculate net revenue for Year Revenue card
   const yearGross = stripe?.yearRevenue || 0;
@@ -259,39 +254,7 @@ export default function Dashboard() {
           format="number"
           loading={loading && !instagram}
         />
-        <div className="card">
-          <p className="text-xs font-semibold text-dark-300 uppercase tracking-wide mb-2">
-            Google Reviews
-          </p>
-          <div className="flex items-end gap-2 mb-2">
-            <span className="text-3xl font-bold text-white">
-              {googleReviews ?? 0}
-            </span>
-            <span className="text-dark-400 text-sm mb-1">/ 10</span>
-          </div>
-          <div className="w-full bg-dark-700 rounded-full h-1.5 mb-2">
-            <div
-              className="bg-brand-500 h-1.5 rounded-full"
-              style={{
-                width: `${Math.min(
-                  100,
-                  ((googleReviews || 0) / 10) * 100
-                )}%`,
-              }}
-            />
-          </div>
-          <div className="flex items-center gap-2 mt-2">
-            <input
-              type="number"
-              min="0"
-              max="500"
-              value={googleReviews ?? 0}
-              onChange={(e) => updateGoogleReviews(e.target.value)}
-              className="w-16 bg-dark-800 border border-dark-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-brand-500"
-            />
-            <span className="text-xs text-dark-500">update count</span>
-          </div>
-        </div>
+        <WebsiteVisits analytics={analytics} loading={loading && !analytics} />
         <div className="card">
           <p className="text-xs font-semibold text-dark-300 uppercase tracking-wide mb-2">
             Wingate Launch
