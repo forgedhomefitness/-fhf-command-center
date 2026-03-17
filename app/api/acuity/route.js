@@ -25,7 +25,13 @@ function getPriceForAppointment(appt) {
   // FALLBACK: If Acuity has no price field, use type-based lookup
   if (!appt.type) return 130;
   const type = appt.type.toLowerCase();
-  if (type.includes("free") || type.includes("complimentary") || type.includes("evaluation")) return 0;
+  if (
+    type.includes("free") ||
+    type.includes("complimentary") ||
+    type.includes("evaluation")
+  )
+    return 0;
+
   for (const [key, price] of Object.entries(PRICE_MAP)) {
     if (type.includes(key.toLowerCase())) return price;
   }
@@ -36,6 +42,7 @@ async function acuityGet(endpoint) {
   const credentials = Buffer.from(
     `${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`
   ).toString("base64");
+
   const res = await fetch(`${ACUITY_BASE}${endpoint}`, {
     headers: { Authorization: `Basic ${credentials}` },
     cache: "no-store",
@@ -43,6 +50,7 @@ async function acuityGet(endpoint) {
   if (!res.ok) throw new Error(`Acuity API error: ${res.status}`);
   return res.json();
 }
+
 export async function GET() {
   if (!process.env.ACUITY_USER_ID || !process.env.ACUITY_API_KEY) {
     return NextResponse.json(
@@ -61,10 +69,12 @@ export async function GET() {
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
+
     const lastMonday = new Date(monday);
     lastMonday.setDate(monday.getDate() - 7);
     const lastSunday = new Date(sunday);
     lastSunday.setDate(sunday.getDate() - 7);
+
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
     monthEnd.setHours(23, 59, 59, 999);
@@ -77,39 +87,54 @@ export async function GET() {
     const monthStartStr = monthStart.toISOString().split("T")[0];
     const monthEndStr = monthEnd.toISOString().split("T")[0];
 
-    const [weekAppts, lastWeekAppts, upcoming, monthAppts] = await Promise.all([
-      acuityGet(`/appointments?minDate=${weekStart}&maxDate=${weekEnd}&max=100`),
-      acuityGet(`/appointments?minDate=${lastWeekStart}&maxDate=${lastWeekEnd}&max=100`),
-      acuityGet(`/appointments?minDate=${today}&max=20&direction=ASC`),
-      acuityGet(`/appointments?minDate=${monthStartStr}&maxDate=${monthEndStr}&max=200`),
-    ]);
+    const [weekAppts, lastWeekAppts, upcoming, monthAppts] =
+      await Promise.all([
+        acuityGet(
+          `/appointments?minDate=${weekStart}&maxDate=${weekEnd}&max=100`
+        ),
+        acuityGet(
+          `/appointments?minDate=${lastWeekStart}&maxDate=${lastWeekEnd}&max=100`
+        ),
+        acuityGet(`/appointments?minDate=${today}&max=20&direction=ASC`),
+        acuityGet(
+          `/appointments?minDate=${monthStartStr}&maxDate=${monthEndStr}&max=200`
+        ),
+      ]);
+
     const activeWeekAppts = weekAppts.filter((a) => !a.canceled);
     const weekSessions = activeWeekAppts.length;
     const weekRevenue = activeWeekAppts.reduce(
-      (sum, appt) => sum + getPriceForAppointment(appt), 0
+      (sum, appt) => sum + getPriceForAppointment(appt),
+      0
     );
+
     const activeLastWeekAppts = lastWeekAppts.filter((a) => !a.canceled);
     const lastWeekSessions = activeLastWeekAppts.length;
     const lastWeekRevenue = activeLastWeekAppts.reduce(
-      (sum, appt) => sum + getPriceForAppointment(appt), 0
+      (sum, appt) => sum + getPriceForAppointment(appt),
+      0
     );
 
     const monthScheduledAppts = monthAppts.filter((a) => !a.canceled);
     const nowMs = now.getTime();
 
-    // Split into completed (past) and scheduled (future)
-    const completedAppts = monthScheduledAppts.filter((a) => new Date(a.datetime).getTime() < nowMs);
-    const scheduledAppts = monthScheduledAppts.filter((a) => new Date(a.datetime).getTime() >= nowMs);
+    const completedAppts = monthScheduledAppts.filter(
+      (a) => new Date(a.datetime).getTime() < nowMs
+    );
+    const scheduledAppts = monthScheduledAppts.filter(
+      (a) => new Date(a.datetime).getTime() >= nowMs
+    );
 
     const monthEarnedRevenue = completedAppts.reduce(
-      (sum, appt) => sum + getPriceForAppointment(appt), 0
+      (sum, appt) => sum + getPriceForAppointment(appt),
+      0
     );
     const monthRemainingRevenue = scheduledAppts.reduce(
-      (sum, appt) => sum + getPriceForAppointment(appt), 0
+      (sum, appt) => sum + getPriceForAppointment(appt),
+      0
     );
     const monthProjectedRevenue = monthEarnedRevenue + monthRemainingRevenue;
 
-    // Session-level detail for every appointment this month
     const monthSessionDetails = monthScheduledAppts.map((a) => ({
       id: a.id,
       client: `${a.firstName} ${a.lastName}`,
@@ -117,8 +142,10 @@ export async function GET() {
       type: a.type,
       price: getPriceForAppointment(a),
       acuityPrice: a.price,
-      status: new Date(a.datetime).getTime() < nowMs ? "completed" : "scheduled",
+      status:
+        new Date(a.datetime).getTime() < nowMs ? "completed" : "scheduled",
     }));
+
     const upcomingFormatted = upcoming
       .filter((a) => !a.canceled)
       .slice(0, 10)
@@ -135,15 +162,28 @@ export async function GET() {
     const clientRevenueMap = {};
     for (const appt of monthScheduledAppts) {
       const name = `${appt.firstName} ${appt.lastName}`;
+      const price = getPriceForAppointment(appt);
+      const isCompleted = new Date(appt.datetime).getTime() < nowMs;
+
       if (!clientRevenueMap[name]) {
-        clientRevenueMap[name] = { sessions: 0, revenue: 0, completed: 0, scheduled: 0 };
+        clientRevenueMap[name] = {
+          sessions: 0,
+          revenue: 0,
+          completedRevenue: 0,
+          scheduledRevenue: 0,
+          completed: 0,
+          scheduled: 0,
+        };
       }
       clientRevenueMap[name].sessions += 1;
-      clientRevenueMap[name].revenue += getPriceForAppointment(appt);
-      if (new Date(appt.datetime).getTime() < nowMs) {
+      clientRevenueMap[name].revenue += price;
+
+      if (isCompleted) {
         clientRevenueMap[name].completed += 1;
+        clientRevenueMap[name].completedRevenue += price;
       } else {
         clientRevenueMap[name].scheduled += 1;
+        clientRevenueMap[name].scheduledRevenue += price;
       }
     }
 
