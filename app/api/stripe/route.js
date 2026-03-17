@@ -30,12 +30,22 @@ export async function GET() {
       new Date(now.getFullYear(), 0, 1).getTime() / 1000
     );
 
-    // Fetch month charges, year charges, and customers in parallel
-    const [monthCharges, yearCharges, customers] = await Promise.all([
-      stripeGet(`/charges?created[gte]=${monthStart}&limit=100`),
-      stripeGet(`/charges?created[gte]=${yearStart}&limit=100`),
-      stripeGet(`/customers?limit=100`),
-    ]);
+    // Week start = Monday 00:00:00
+    const weekStartDate = new Date(now);
+    const day = weekStartDate.getDay(); // 0=Sun, 1=Mon
+    const diff = day === 0 ? 6 : day - 1;
+    weekStartDate.setDate(weekStartDate.getDate() - diff);
+    weekStartDate.setHours(0, 0, 0, 0);
+    const weekStart = Math.floor(weekStartDate.getTime() / 1000);
+
+    // Fetch week, month, year charges, and customers in parallel
+    const [weekCharges, monthCharges, yearCharges, customers] =
+      await Promise.all([
+        stripeGet(`/charges?created[gte]=${weekStart}&limit=100`),
+        stripeGet(`/charges?created[gte]=${monthStart}&limit=100`),
+        stripeGet(`/charges?created[gte]=${yearStart}&limit=100`),
+        stripeGet(`/customers?limit=100`),
+      ]);
 
     const sumSucceeded = (charges) =>
       charges.data
@@ -45,23 +55,27 @@ export async function GET() {
     const countSucceeded = (charges) =>
       charges.data.filter((c) => c.status === "succeeded").length;
 
-    // Gross revenue
+    // Weekly
+    const weekRevenue = sumSucceeded(weekCharges);
+    const weekChargeCount = countSucceeded(weekCharges);
+    const weekStripeFees =
+      Math.round((weekRevenue * 0.029 + weekChargeCount * 0.3) * 100) / 100;
+    const weekNetRevenue =
+      Math.round((weekRevenue - weekStripeFees) * 100) / 100;
+
+    // Monthly
     const monthRevenue = sumSucceeded(monthCharges);
-    const yearRevenue = sumSucceeded(yearCharges);
-
-    // Charge counts (for $0.30/transaction fee)
     const monthChargeCount = countSucceeded(monthCharges);
-    const yearChargeCount = countSucceeded(yearCharges);
-
-    // Stripe fee estimates: 2.9% + $0.30 per transaction
     const monthStripeFees =
       Math.round((monthRevenue * 0.029 + monthChargeCount * 0.3) * 100) / 100;
-    const yearStripeFees =
-      Math.round((yearRevenue * 0.029 + yearChargeCount * 0.3) * 100) / 100;
-
-    // Net revenue (after Stripe fees)
     const monthNetRevenue =
       Math.round((monthRevenue - monthStripeFees) * 100) / 100;
+
+    // Yearly
+    const yearRevenue = sumSucceeded(yearCharges);
+    const yearChargeCount = countSucceeded(yearCharges);
+    const yearStripeFees =
+      Math.round((yearRevenue * 0.029 + yearChargeCount * 0.3) * 100) / 100;
     const yearNetRevenue =
       Math.round((yearRevenue - yearStripeFees) * 100) / 100;
 
@@ -77,6 +91,10 @@ export async function GET() {
       }));
 
     return NextResponse.json({
+      weekRevenue,
+      weekNetRevenue,
+      weekStripeFees,
+      weekChargeCount,
       monthRevenue,
       yearRevenue,
       monthNetRevenue,
