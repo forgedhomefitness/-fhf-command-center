@@ -3,19 +3,20 @@
 import { useState, useEffect } from "react";
 
 const CATEGORY_CONFIG = {
-  gas: { label: "Gas & Fuel", icon: "⛽", color: "text-orange-400" },
-  vehicle: { label: "Vehicle & Auto", icon: "🚗", color: "text-blue-400" },
-  equipment: { label: "Equipment", icon: "🏋️", color: "text-green-400" },
-  marketing: { label: "Marketing", icon: "📢", color: "text-purple-400" },
-  insurance: { label: "Insurance", icon: "🛡️", color: "text-cyan-400" },
-  software: { label: "Software & Subs", icon: "💻", color: "text-indigo-400" },
-  other: { label: "Other", icon: "📋", color: "text-dark-300" },
+  gas: { label: "Gas & Fuel", icon: "\u26FD", color: "text-orange-400" },
+  vehicle: { label: "Vehicle & Auto", icon: "\uD83D\uDE97", color: "text-blue-400" },
+  equipment: { label: "Equipment", icon: "\uD83C\uDFCB\uFE0F", color: "text-green-400" },
+  marketing: { label: "Marketing", icon: "\uD83D\uDCE2", color: "text-purple-400" },
+  insurance: { label: "Insurance", icon: "\uD83D\uDEE1\uFE0F", color: "text-cyan-400" },
+  software: { label: "Software & Subs", icon: "\uD83D\uDCBB", color: "text-indigo-400" },
+  other: { label: "Other", icon: "\uD83D\uDCCB", color: "text-dark-300" },
 };
 
 function ExpenseCategoryCard({ category, total, items, totalExpenses }) {
   const [expanded, setExpanded] = useState(false);
   const config = CATEGORY_CONFIG[category] || CATEGORY_CONFIG.other;
-  const pct = totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0;
+  const pct =
+    totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0;
 
   return (
     <div className="card">
@@ -41,7 +42,12 @@ function ExpenseCategoryCard({ category, total, items, totalExpenses }) {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </div>
         </div>
@@ -70,11 +76,10 @@ function ExpenseCategoryCard({ category, total, items, totalExpenses }) {
 
 function MileageCard({ mileageEstimate }) {
   if (!mileageEstimate) return null;
-
   return (
     <div className="card border border-brand-500/20">
       <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">🚗</span>
+        <span className="text-lg">{"\uD83D\uDE97"}</span>
         <h3 className="text-sm font-semibold text-brand-400 uppercase tracking-wide">
           Mileage Deduction Estimate
         </h3>
@@ -114,6 +119,7 @@ function MileageCard({ mileageEstimate }) {
 
 export default function ExpensesPage() {
   const [data, setData] = useState(null);
+  const [stripeData, setStripeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("ytd");
 
@@ -121,9 +127,16 @@ export default function ExpensesPage() {
     async function fetchExpenses() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/quickbooks/expenses?period=${period}`);
-        const json = await res.json();
-        if (json.connected) setData(json);
+        const [qbRes, stripeRes] = await Promise.allSettled([
+          fetch(`/api/quickbooks/expenses?period=${period}`).then((r) =>
+            r.json()
+          ),
+          fetch("/api/stripe").then((r) => r.json()),
+        ]);
+        if (qbRes.status === "fulfilled" && qbRes.value.connected)
+          setData(qbRes.value);
+        if (stripeRes.status === "fulfilled" && stripeRes.value.connected)
+          setStripeData(stripeRes.value);
       } catch (err) {
         console.error("Failed to fetch expenses:", err);
       }
@@ -132,13 +145,32 @@ export default function ExpensesPage() {
     fetchExpenses();
   }, [period]);
 
+  // Use Stripe for income (actual payments), QB for expenses
+  const stripeIncome =
+    period === "month"
+      ? stripeData?.monthRevenue || 0
+      : stripeData?.yearRevenue || 0;
+  const stripeNet =
+    period === "month"
+      ? stripeData?.monthNetRevenue || 0
+      : stripeData?.yearNetRevenue || 0;
+  const stripeFees =
+    period === "month"
+      ? stripeData?.monthStripeFees || 0
+      : stripeData?.yearStripeFees || 0;
+  const totalExpenses = data?.totalExpenses || 0;
+  const netProfit = stripeNet - totalExpenses;
+  const expenseRatio =
+    stripeIncome > 0 ? Math.round((totalExpenses / stripeIncome) * 100) : 0;
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Expenses</h1>
           <p className="text-sm text-dark-400">
-            QuickBooks expense breakdown · {data?.period || "Loading..."}
+            Revenue from Stripe &middot; Expenses from QuickBooks &middot;{" "}
+            {data?.period || "Loading..."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -180,31 +212,51 @@ export default function ExpensesPage() {
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Total Income</p>
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
+                Gross Revenue
+              </p>
               <p className="text-2xl font-bold text-green-400">
-                ${data.totalIncome.toLocaleString()}
+                ${stripeIncome.toLocaleString()}
+              </p>
+              <p className="text-[10px] text-dark-500 mt-1">
+                Net: ${Math.round(stripeNet).toLocaleString()} (after $
+                {Math.round(stripeFees)} fees)
               </p>
             </div>
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Total Expenses</p>
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
+                Total Expenses
+              </p>
               <p className="text-2xl font-bold text-red-400">
-                ${data.totalExpenses.toLocaleString()}
+                ${totalExpenses.toLocaleString()}
+              </p>
+              <p className="text-[10px] text-dark-500 mt-1">
+                QuickBooks tracked
               </p>
             </div>
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Net Income</p>
-              <p className={`text-2xl font-bold ${data.netIncome >= 0 ? "text-green-400" : "text-red-400"}`}>
-                ${data.netIncome.toLocaleString()}
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
+                Net Profit
+              </p>
+              <p
+                className={`text-2xl font-bold ${netProfit >= 0 ? "text-green-400" : "text-red-400"}`}
+              >
+                ${Math.round(netProfit).toLocaleString()}
+              </p>
+              <p className="text-[10px] text-dark-500 mt-1">
+                After fees + expenses
               </p>
             </div>
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Expense Ratio</p>
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
+                Expense Ratio
+              </p>
               <p className="text-2xl font-bold text-brand-400">
-                {data.totalIncome > 0
-                  ? Math.round((data.totalExpenses / data.totalIncome) * 100)
-                  : 0}%
+                {expenseRatio}%
               </p>
-              <p className="text-[10px] text-dark-500 mt-1">Target: under 30%</p>
+              <p className="text-[10px] text-dark-500 mt-1">
+                Target: under 30%
+              </p>
             </div>
           </div>
 
@@ -226,7 +278,7 @@ export default function ExpensesPage() {
                 category={cat.category}
                 total={cat.total}
                 items={cat.items}
-                totalExpenses={data.totalExpenses}
+                totalExpenses={totalExpenses}
               />
             ))}
           </div>
@@ -238,18 +290,23 @@ export default function ExpensesPage() {
             </h3>
             <div className="space-y-2">
               {data.topExpenses.map((exp, i) => {
-                const config = CATEGORY_CONFIG[exp.category] || CATEGORY_CONFIG.other;
+                const config =
+                  CATEGORY_CONFIG[exp.category] || CATEGORY_CONFIG.other;
                 return (
                   <div
                     key={i}
                     className="flex items-center justify-between py-2 border-b border-dark-700 last:border-0"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-dark-500 w-5">{i + 1}.</span>
+                      <span className="text-xs text-dark-500 w-5">
+                        {i + 1}.
+                      </span>
                       <span className="text-sm">{config.icon}</span>
                       <div>
                         <p className="text-sm text-dark-200">{exp.name}</p>
-                        <p className="text-[10px] text-dark-500 uppercase">{config.label}</p>
+                        <p className="text-[10px] text-dark-500 uppercase">
+                          {config.label}
+                        </p>
                       </div>
                     </div>
                     <span className="text-sm font-bold text-white">
@@ -265,9 +322,10 @@ export default function ExpensesPage() {
           <div className="mt-6 p-4 rounded-lg border border-dark-700 bg-dark-800/30">
             <p className="text-xs text-dark-400">
               <span className="text-brand-400 font-semibold">CPA Note:</span>{" "}
-              All expense data sourced from QuickBooks Online. For tax filing,
-              Turner & Costa PC will reconcile these figures with actual receipts
-              and bank statements. Keep all receipts for expenses over $75.
+              Revenue sourced from Stripe (actual payments processed).
+              Expenses sourced from QuickBooks Online. For tax filing, Turner
+              & Costa PC will reconcile these figures with actual receipts and
+              bank statements. Keep all receipts for expenses over $75.
             </p>
           </div>
         </>
