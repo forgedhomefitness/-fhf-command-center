@@ -43,19 +43,23 @@ async function refreshTokens() {
 
   const clientId = process.env.QB_CLIENT_ID;
   const clientSecret = process.env.QB_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error("Missing QB_CLIENT_ID or QB_CLIENT_SECRET");
+  if (!clientId || !clientSecret)
+    throw new Error("Missing QB_CLIENT_ID or QB_CLIENT_SECRET");
 
-  const res = await fetch("https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-    },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-    }),
-  });
+  const res = await fetch(
+    "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      }),
+    }
+  );
 
   if (!res.ok) {
     const err = await res.text();
@@ -63,16 +67,14 @@ async function refreshTokens() {
   }
 
   const tokens = await res.json();
-
   await Promise.all([
     redisSet("qb_access_token", tokens.access_token),
     redisSet("qb_refresh_token", tokens.refresh_token),
   ]);
-
   return tokens.access_token;
 }
 
-// ── QuickBooks API call ──────────────────────────────────────────
+// ── QuickBooks API call ────────────────────────────────────────── 
 async function callQBApi(url, accessToken) {
   return fetch(url, {
     headers: {
@@ -82,10 +84,9 @@ async function callQBApi(url, accessToken) {
   });
 }
 
-// ── Main route ───────────────────────────────────────────────────
+// ── Main route ─────────────────────────────────────────────────── 
 export async function GET() {
   const realmId = process.env.QB_REALM_ID;
-
   if (!realmId) {
     return NextResponse.json(
       { error: "QuickBooks credentials not configured", connected: false },
@@ -95,8 +96,10 @@ export async function GET() {
 
   try {
     const now = new Date();
-    const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    // YTD: start from January 1 of current year
+    const startDate = `${now.getFullYear()}-01-01`;
     const endDate = now.toISOString().split("T")[0];
+
     const url = `https://quickbooks.api.intuit.com/v3/company/${realmId}/reports/ProfitAndLoss?start_date=${startDate}&end_date=${endDate}&minorversion=65`;
 
     let accessToken = await getAccessToken();
