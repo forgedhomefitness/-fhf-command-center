@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 import { PRICING } from "@/lib/constants";
 
 const DEFAULT_CLIENTS = [
-  { id: 1, name: "Alex Tannenbaum", type: "backToBack", startDate: "2026-03-01", lastSession: "2026-03-11", totalSessions: 8, notes: "6am sessions, very consistent", status: "active" },
-  { id: 2, name: "Paul Liberman", type: "private", startDate: "2026-03-01", lastSession: "2026-03-12", totalSessions: 9, notes: "8am Mondays/Thursdays", status: "active" },
-  { id: 3, name: "Jon Blotner", type: "private", startDate: "2026-03-01", lastSession: "2026-03-10", totalSessions: 6, notes: "6:45am, early bird", status: "active" },
-  { id: 4, name: "Jon Nuger", type: "private", startDate: "2026-03-01", lastSession: "2026-03-10", totalSessions: 6, notes: "5:30am, very early", status: "active" },
-  { id: 5, name: "Ali Nuger", type: "private", startDate: "2026-03-01", lastSession: "2026-03-08", totalSessions: 4, notes: "Schedule varies week to week. Tuesdays: private session alone $130. Thursdays: group training with husband Jon Nuger same hour $205. Either may be absent due to travel/work.", status: "active" },
-  { id: 6, name: "Richa Saha", type: "private", startDate: "2026-03-01", lastSession: "2026-03-09", totalSessions: 5, notes: "4:30pm sessions", status: "active" },
-  { id: 7, name: "Brian Elworthy", type: "private", startDate: "2026-03-13", lastSession: "2026-03-13", totalSessions: 1, notes: "New client, evaluation done", status: "active" },
+  { id: 1, name: "Alex Tannenbaum", type: "backToBack", startDate: "2026-03-01", notes: "6am sessions, very consistent", status: "active" },
+  { id: 2, name: "Paul Liberman", type: "private", startDate: "2026-03-01", notes: "8am Mondays/Thursdays", status: "active" },
+  { id: 3, name: "Jon Blotner", type: "private", startDate: "2026-03-01", notes: "6:45am, early bird", status: "active" },
+  { id: 4, name: "Jon Nuger", type: "private", startDate: "2026-03-01", notes: "5:30am, very early", status: "active" },
+  { id: 5, name: "Ali Nuger", type: "private", startDate: "2026-03-01", notes: "Schedule varies week to week. Tuesdays: private session alone $130. Thursdays: group training with husband Jon Nuger same hour $205. Either may be absent due to travel/work.", status: "active" },
+  { id: 6, name: "Richa Saha", type: "private", startDate: "2026-03-01", notes: "4:30pm sessions", status: "active" },
+  { id: 7, name: "Brian Elworthy", type: "private", startDate: "2026-03-13", notes: "New client, evaluation done", status: "active" },
 ];
 
 const TYPE_LABELS = { private: "Private", backToBack: "Back-to-Back", studentAthlete: "Student Athlete", senior30: "Senior 30min", senior60: "Senior 60min", group: "Group" };
@@ -25,11 +25,20 @@ function statusColor(days) {
   return "text-red-400";
 }
 
+function getLastCompletedDate(name, sessionDetails) {
+  if (!sessionDetails || !sessionDetails.length) return null;
+  const clientSessions = sessionDetails
+    .filter(s => s.client === name && (s.status === "completed" || s.status === "Completed"))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+  return clientSessions.length > 0 ? clientSessions[0].date : null;
+}
+
 export default function Clients() {
   const [clients, setClients] = useState([]);
+  const [acuity, setAcuity] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ name: "", type: "private", startDate: "", lastSession: "", totalSessions: 0, notes: "", status: "active" });
+  const [form, setForm] = useState({ name: "", type: "private", startDate: "", notes: "", status: "active" });
 
   useEffect(() => {
     const saved = localStorage.getItem("fhf-clients");
@@ -40,15 +49,19 @@ export default function Clients() {
     if (clients.length > 0) localStorage.setItem("fhf-clients", JSON.stringify(clients));
   }, [clients]);
 
+  useEffect(() => {
+    fetch("/api/acuity").then(r => r.json()).then(data => setAcuity(data)).catch(() => {});
+  }, []);
+
   function saveClient() {
     if (!form.name.trim()) return;
     if (editId) {
-      setClients(clients.map(c => c.id === editId ? { ...form, id: editId, totalSessions: Number(form.totalSessions) } : c));
+      setClients(clients.map(c => c.id === editId ? { ...form, id: editId } : c));
       setEditId(null);
     } else {
-      setClients([{ ...form, id: Date.now(), totalSessions: Number(form.totalSessions) }, ...clients]);
+      setClients([{ ...form, id: Date.now() }, ...clients]);
     }
-    setForm({ name: "", type: "private", startDate: "", lastSession: "", totalSessions: 0, notes: "", status: "active" });
+    setForm({ name: "", type: "private", startDate: "", notes: "", status: "active" });
     setShowAdd(false);
   }
 
@@ -63,8 +76,14 @@ export default function Clients() {
   }
 
   const active = clients.filter(c => c.status === "active");
-  const totalMonthly = active.reduce((sum, c) => sum + (PRICING[c.type]?.rate || 130) * 4, 0);
-  const atRisk = active.filter(c => daysSince(c.lastSession) > 14).length;
+  const breakdown = acuity?.clientRevenueBreakdown || {};
+  const sessionDetails = acuity?.monthSessionDetails || [];
+  const totalMonthly = acuity?.monthProjectedRevenue || active.reduce((sum, c) => sum + (PRICING[c.type]?.rate || 130) * 4, 0);
+
+  const atRisk = active.filter(c => {
+    const lastDate = getLastCompletedDate(c.name, sessionDetails);
+    return daysSince(lastDate) > 14;
+  }).length;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -76,7 +95,7 @@ export default function Clients() {
             {atRisk > 0 && <span className="text-red-400 ml-2">· {atRisk} at risk (14+ days)</span>}
           </p>
         </div>
-        <button onClick={() => { setShowAdd(!showAdd); setEditId(null); setForm({ name: "", type: "private", startDate: "", lastSession: "", totalSessions: 0, notes: "", status: "active" }); }}
+        <button onClick={() => { setShowAdd(!showAdd); setEditId(null); setForm({ name: "", type: "private", startDate: "", notes: "", status: "active" }); }}
           className="px-4 py-2 rounded-lg bg-brand-500 text-dark-950 font-semibold text-sm hover:bg-brand-400 transition-colors">
           + Add Client
         </button>
@@ -112,13 +131,6 @@ export default function Clients() {
               <input type="date" value={form.startDate} onChange={e => setForm({...form, startDate: e.target.value})}
                 className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none" />
             </div>
-            <div>
-              <label className="text-xs text-dark-400 block mb-1">Last Session</label>
-              <input type="date" value={form.lastSession} onChange={e => setForm({...form, lastSession: e.target.value})}
-                className="w-full bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none" />
-            </div>
-            <input type="number" placeholder="Total sessions" value={form.totalSessions} onChange={e => setForm({...form, totalSessions: e.target.value})}
-              className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white placeholder-dark-500 focus:outline-none" />
             <select value={form.status} onChange={e => setForm({...form, status: e.target.value})}
               className="bg-dark-800 border border-dark-600 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
               <option value="active">Active</option>
@@ -137,7 +149,12 @@ export default function Clients() {
 
       <div className="space-y-3">
         {clients.map(client => {
-          const days = daysSince(client.lastSession);
+          const ac = breakdown[client.name];
+          const completedSessions = ac?.completed ?? 0;
+          const scheduledSessions = ac?.scheduled ?? 0;
+          const clientRevenue = ac?.revenue ?? 0;
+          const lastDate = getLastCompletedDate(client.name, sessionDetails);
+          const days = daysSince(lastDate);
           const rate = PRICING[client.type]?.rate || 130;
           return (
             <div key={client.id} className={`card flex flex-col sm:flex-row sm:items-center gap-4 ${client.status !== "active" ? "opacity-60" : ""}`}>
@@ -149,9 +166,9 @@ export default function Clients() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-dark-400">
-                  <span className="text-brand-400 font-medium">${rate}/session · ~${(rate*4).toLocaleString()}/mo</span>
+                  <span className="text-brand-400 font-medium">${rate}/session · ${clientRevenue.toLocaleString()} earned</span>
                   <span>{TYPE_LABELS[client.type]}</span>
-                  <span>{client.totalSessions} sessions total</span>
+                  <span>{completedSessions} completed{scheduledSessions > 0 ? ` · ${scheduledSessions} scheduled` : ""}</span>
                   {client.startDate && <span>Since {new Date(client.startDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>}
                 </div>
                 {client.notes && <p className="text-xs text-dark-500 mt-1">{client.notes}</p>}
@@ -159,8 +176,8 @@ export default function Clients() {
               <div className="flex items-center gap-4 flex-shrink-0">
                 <div className="text-right">
                   <p className="text-xs text-dark-500">Last session</p>
-                  <p className={`text-sm font-medium ${statusColor(days)}`}>
-                    {days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`}
+                  <p className={`text-sm font-medium ${lastDate ? statusColor(days) : "text-dark-500"}`}>
+                    {lastDate ? (days === 0 ? "Today" : days === 1 ? "Yesterday" : `${days}d ago`) : "No data"}
                   </p>
                 </div>
                 <div className="flex gap-2">
