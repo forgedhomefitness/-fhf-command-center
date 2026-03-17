@@ -44,7 +44,7 @@ function WingateCountdown() {
         </span>
       </div>
       <p className="text-xs text-dark-400 mb-3">
-        July 1, 2026 Â· ~$2,600/mo guaranteed
+        July 1, 2026 &middot; ~$2,600/mo guaranteed
       </p>
       <div className="w-full bg-dark-700 rounded-full h-2 mb-4">
         <div
@@ -112,8 +112,8 @@ function SessionPaceTracker({ weekSessions, lastWeekSessions }) {
             pct >= 80
               ? "text-green-400 bg-green-500/10"
               : pct >= 50
-                ? "text-yellow-400 bg-yellow-500/10"
-                : "text-red-400 bg-red-500/10"
+              ? "text-yellow-400 bg-yellow-500/10"
+              : "text-red-400 bg-red-500/10"
           }`}
         >
           {pct >= 80 ? "On Track" : pct >= 50 ? "Behind" : "At Risk"}
@@ -159,13 +159,14 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [stripeRes, acuityRes, qbRes, igRes, analyticsRes] = await Promise.allSettled([
-      fetch("/api/stripe").then((r) => r.json()),
-      fetch("/api/acuity").then((r) => r.json()),
-      fetch("/api/quickbooks").then((r) => r.json()),
-      fetch("/api/instagram").then((r) => r.json()),
-      fetch("/api/analytics").then((r) => r.json()),
-    ]);
+    const [stripeRes, acuityRes, qbRes, igRes, analyticsRes] =
+      await Promise.allSettled([
+        fetch("/api/stripe").then((r) => r.json()),
+        fetch("/api/acuity").then((r) => r.json()),
+        fetch("/api/quickbooks").then((r) => r.json()),
+        fetch("/api/instagram").then((r) => r.json()),
+        fetch("/api/analytics").then((r) => r.json()),
+      ]);
 
     if (stripeRes.status === "fulfilled") setStripe(stripeRes.value);
     if (acuityRes.status === "fulfilled") setAcuity(acuityRes.value);
@@ -183,16 +184,12 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  // Calculate net revenue for Year Revenue card
+  // All financial figures from Stripe (actual payments)
   const yearGross = stripe?.yearRevenue || 0;
   const yearNet = stripe?.yearNetRevenue || 0;
-
-  // Calculate net for weekly revenue
-  const weekGross = acuity?.weekRevenue ?? 0;
-  const weekSessions = acuity?.weekSessions ?? 0;
-  const weekStripeFees =
-    Math.round((weekGross * 0.029 + weekSessions * 0.3) * 100) / 100;
-  const weekNet = Math.round((weekGross - weekStripeFees) * 100) / 100;
+  const weekGross = stripe?.weekRevenue ?? 0;
+  const weekStripeFees = stripe?.weekStripeFees ?? 0;
+  const weekNet = stripe?.weekNetRevenue ?? 0;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -224,7 +221,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Monthly Revenue â Top of Dashboard */}
+      {/* Monthly Revenue - Top of Dashboard */}
       <MonthlyRevenue
         acuityData={acuity}
         stripeData={stripe}
@@ -235,9 +232,10 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <MetricCard
           label="Month Revenue"
-          value={acuity?.monthProjectedRevenue}
+          value={stripe?.monthRevenue}
           target={9000}
           format="currency"
+          subtitle={stripe?.monthNetRevenue > 0 ? `Net: $${Math.round(stripe.monthNetRevenue).toLocaleString()}` : null}
           loading={loading && !stripe}
         />
         <MetricCard
@@ -245,7 +243,11 @@ export default function Dashboard() {
           value={yearGross}
           target={108000}
           format="currency"
-          subtitle={yearNet > 0 ? `Net: $${Math.round(yearNet).toLocaleString()}` : null}
+          subtitle={
+            yearNet > 0
+              ? `Net: $${Math.round(yearNet).toLocaleString()}`
+              : null
+          }
           loading={loading && !stripe}
         />
         <MetricCard
@@ -270,13 +272,12 @@ export default function Dashboard() {
           <div className="flex items-end gap-2 mb-2">
             <span className="text-3xl font-bold text-brand-400">
               {Math.ceil(
-                (new Date("2026-07-01") - new Date()) /
-                  (1000 * 60 * 60 * 24)
+                (new Date("2026-07-01") - new Date()) / (1000 * 60 * 60 * 24)
               )}
             </span>
             <span className="text-dark-400 text-sm mb-1">days</span>
           </div>
-          <p className="text-xs text-dark-500">July 1, 2026 Â· +$2,600/mo</p>
+          <p className="text-xs text-dark-500">July 1, 2026 &middot; +$2,600/mo</p>
         </div>
       </div>
 
@@ -284,7 +285,7 @@ export default function Dashboard() {
       <div className="mb-6">
         <WeeklyRevenueGoal
           weekRevenue={weekGross}
-          weekSessions={weekSessions}
+          weekSessions={stripe?.weekChargeCount ?? 0}
           weekNetRevenue={weekNet}
           weekStripeFees={weekStripeFees}
         />
@@ -320,7 +321,7 @@ export default function Dashboard() {
           {quickbooks?.connected && (
             <div className="card">
               <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-4">
-                QuickBooks P&L â {quickbooks.period}
+                QuickBooks P&L &middot; {quickbooks.period}
               </h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -351,14 +352,13 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-
         <div className="space-y-6">
           <PhaseTracker />
           <WingateCountdown />
           {instagram?.connected && (
             <div className="card">
               <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-3">
-                Instagram â @{instagram.username}
+                Instagram &middot; @{instagram.username}
               </h3>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -386,7 +386,7 @@ export default function Dashboard() {
                         {post.caption || "No caption"}
                       </p>
                       <p className="text-dark-500 mt-1">
-                        {post.likes} likes Â· {post.comments} comments
+                        {post.likes} likes &middot; {post.comments} comments
                       </p>
                     </div>
                   ))}
