@@ -79,6 +79,39 @@ export async function GET() {
     const yearNetRevenue =
       Math.round((yearRevenue - yearStripeFees) * 100) / 100;
 
+    // Monthly breakdown from year charges
+    const monthLabels = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    const monthBuckets = {};
+    for (const c of yearCharges.data) {
+      if (c.status !== "succeeded") continue;
+      const d = new Date(c.created * 1000);
+      const m = d.getMonth();
+      const key = `${d.getFullYear()}-${String(m + 1).padStart(2, "0")}`;
+      if (!monthBuckets[key]) {
+        monthBuckets[key] = {
+          key,
+          label: `${monthLabels[m]} ${d.getFullYear()}`,
+          revenue: 0,
+          chargeCount: 0,
+        };
+      }
+      monthBuckets[key].revenue += c.amount / 100;
+      monthBuckets[key].chargeCount += 1;
+    }
+
+    // Sort by key and calculate fees/net for each month
+    const months = Object.values(monthBuckets)
+      .sort((a, b) => a.key.localeCompare(b.key))
+      .map((m) => {
+        const fees =
+          Math.round((m.revenue * 0.029 + m.chargeCount * 0.3) * 100) / 100;
+        const net = Math.round((m.revenue - fees) * 100) / 100;
+        return { ...m, stripeFees: fees, netRevenue: net };
+      });
+
     const recentCharges = monthCharges.data
       .filter((c) => c.status === "succeeded")
       .slice(0, 10)
@@ -105,6 +138,7 @@ export async function GET() {
       yearChargeCount,
       customerCount: customers.data.length,
       recentCharges,
+      months,
       lastFetched: new Date().toISOString(),
       connected: true,
     });
