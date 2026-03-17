@@ -318,39 +318,71 @@ export default function Dashboard() {
             sessions={acuity?.upcoming}
             loading={loading && !acuity}
           />
-          {quickbooks?.connected && (
-            <div className="card">
-              <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-4">
-                QuickBooks P&L &middot; {quickbooks.period}
-              </h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-dark-400">Income</p>
-                  <p className="text-lg font-bold text-green-400">
-                    ${quickbooks.totalIncome.toLocaleString()}
-                  </p>
+          {quickbooks?.connected && (() => {
+            const stripeGross = yearGross;
+            const qbIncome = quickbooks.totalIncome || 0;
+            const inTransit = Math.round((stripeGross - qbIncome) * 100) / 100;
+            return (
+              <div className="card">
+                <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-4">
+                  QuickBooks P&L &middot; {quickbooks.period}
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-dark-400">Income</p>
+                    <p className="text-lg font-bold text-green-400">
+                      ${qbIncome.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-dark-400">Expenses</p>
+                    <p className="text-lg font-bold text-red-400">
+                      ${quickbooks.totalExpenses.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-dark-400">Net Income</p>
+                    <p
+                      className={`text-lg font-bold ${
+                        quickbooks.netIncome >= 0
+                          ? "text-green-400"
+                          : "text-red-400"
+                      }`}
+                    >
+                      ${quickbooks.netIncome.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs text-dark-400">Expenses</p>
-                  <p className="text-lg font-bold text-red-400">
-                    ${quickbooks.totalExpenses.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-dark-400">Net Income</p>
-                  <p
-                    className={`text-lg font-bold ${
-                      quickbooks.netIncome >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    ${quickbooks.netIncome.toLocaleString()}
-                  </p>
-                </div>
+                {inTransit > 0 && (
+                  <div className="mt-4 pt-3 border-t border-dark-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-dark-300 uppercase tracking-wide">Stripe vs QuickBooks</span>
+                      <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded">
+                        ${Math.round(inTransit).toLocaleString()} unreconciled
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mb-2">
+                      <div>
+                        <p className="text-xs text-dark-500">Stripe Collected</p>
+                        <p className="text-sm font-semibold text-white">${stripeGross.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-dark-500">QB Recorded</p>
+                        <p className="text-sm font-semibold text-white">${qbIncome.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-dark-500">In Transit</p>
+                        <p className="text-sm font-semibold text-yellow-400">${Math.round(inTransit).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-dark-500">
+                      Stripe payouts take 2-3 days to reach your bank. QB records income when the deposit hits. This gap is normal.
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
         <div className="space-y-6">
           <PhaseTracker />
