@@ -17,7 +17,7 @@ function getCurrentPhase() {
   return 4;
 }
 
-function MonthlyCard({ label, amount, target, color, subtitle }) {
+function MonthlyCard({ label, amount, target, color, subtitle, netAmount }) {
   const pct = target > 0 ? Math.min(100, Math.round((amount / target) * 100)) : 0;
 
   const barColor =
@@ -48,6 +48,7 @@ function MonthlyCard({ label, amount, target, color, subtitle }) {
           ${amount.toLocaleString()}
         </span>
       </div>
+      {netAmount != null && (<p className="text-xs text-dark-400 mt-1 mb-1">Net: <span className="text-brand-400 font-semibold">${Math.round(netAmount).toLocaleString()}</span></p>)}
       {subtitle && (
         <p className="text-xs text-dark-400 mb-3">{subtitle}</p>
       )}
@@ -89,6 +90,11 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
   const completedCount = acuityData?.monthCompletedCount ?? 0;
   const scheduledCount = acuityData?.monthScheduledCount ?? 0;
 
+  // Net revenue calculations
+  const earnedNet = stripeData?.monthNetRevenue ?? null;
+  const projectedFees = monthProjected > 0 ? Math.round((monthProjected * 0.029 + (completedCount + scheduledCount) * 0.30) * 100) / 100 : 0;
+  const projectedNet = monthProjected > 0 ? Math.round((monthProjected - projectedFees) * 100) / 100 : null;
+
   const now = new Date();
   const monthName = now.toLocaleString("en-US", { month: "long" });
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -112,6 +118,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           target={monthTarget}
           color="border-dark-700 bg-dark-800/60"
           subtitle={`${completedCount} sessions completed`}
+          netAmount={earnedNet}
         />
         <MonthlyCard
           label="Projected Total"
@@ -119,6 +126,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           target={monthTarget}
           color="border-brand-500/30 bg-brand-500/5"
           subtitle={`${completedCount} completed + ${scheduledCount} scheduled`}
+          netAmount={projectedNet}
         />
         <MonthlyCard
           label="Monthly Target"
