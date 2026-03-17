@@ -86,7 +86,8 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
 
   const monthEarned = acuityData?.monthEarnedRevenue ?? stripeData?.monthRevenue ?? 0;
   const monthProjected = acuityData?.monthProjectedRevenue ?? monthEarned;
-  const monthSessions = acuityData?.monthSessionCount ?? 0;
+  const completedCount = acuityData?.monthCompletedCount ?? 0;
+  const scheduledCount = acuityData?.monthScheduledCount ?? 0;
 
   const now = new Date();
   const monthName = now.toLocaleString("en-US", { month: "long" });
@@ -110,14 +111,14 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           amount={monthEarned}
           target={monthTarget}
           color="border-dark-700 bg-dark-800/60"
-          subtitle={`${monthSessions} sessions completed`}
+          subtitle={`${completedCount} sessions completed`}
         />
         <MonthlyCard
           label="Projected Total"
           amount={monthProjected}
           target={monthTarget}
           color="border-brand-500/30 bg-brand-500/5"
-          subtitle={`Earned + ${monthSessions > 0 ? "scheduled" : "upcoming"} sessions`}
+          subtitle={`${completedCount} completed + ${scheduledCount} scheduled`}
         />
         <MonthlyCard
           label="Monthly Target"
