@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   "/api/quickbooks",
   "/api/stripe",
   "/api/analytics",
+  "/api/mileage",
 ];
 
 export async function middleware(request) {
@@ -26,6 +27,7 @@ export async function middleware(request) {
 
   // Check auth cookie
   const token = request.cookies.get("fhf-auth")?.value;
+
   if (!token) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
