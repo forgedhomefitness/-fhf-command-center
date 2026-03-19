@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-// — Upstash Redis helpers —
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -19,13 +18,9 @@ async function redisGet(key) {
 
 async function redisSet(key, value) {
   try {
-    await fetch(`${REDIS_URL}/set/${key}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${REDIS_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(JSON.stringify(value)),
+    const encoded = encodeURIComponent(JSON.stringify(value));
+    await fetch(`${REDIS_URL}/set/${key}/${encoded}`, {
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
     });
   } catch (err) {
     console.error("Redis set error:", err);
@@ -33,12 +28,10 @@ async function redisSet(key, value) {
 }
 
 async function verifyAuth(request) {
-  // Check CRON_SECRET header
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true;
 
-  // Check fhf-auth cookie (logged-in dashboard user)
   const token = request.cookies.get("fhf-auth")?.value;
   if (token && process.env.AUTH_SECRET) {
     try {
@@ -50,9 +43,7 @@ async function verifyAuth(request) {
     }
   }
 
-  // If no auth configured, allow
   if (!cronSecret && !process.env.AUTH_SECRET) return true;
-
   return false;
 }
 
