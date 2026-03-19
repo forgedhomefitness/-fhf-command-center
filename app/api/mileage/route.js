@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const REDIS_URL = (process.env.UPSTASH_REDIS_REST_URL || "").replace(/["']/g, "").replace(/\/$/, "");
+const REDIS_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "").replace(/["']/g, "");
 
 async function redisGet(key) {
   try {
-    const res = await fetch(`${REDIS_URL}/get/${key}`, {
-      headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
+    const res = await fetch(REDIS_URL + "/get/" + key, {
+      headers: { Authorization: "Bearer " + REDIS_TOKEN },
     });
     const data = await res.json();
     return data.result ? JSON.parse(data.result) : null;
@@ -18,9 +18,9 @@ async function redisGet(key) {
 
 async function redisSet(key, value) {
   const jsonValue = JSON.stringify(value);
-  const url = `${REDIS_URL}/set/${key}/${encodeURIComponent(jsonValue)}`;
+  const url = REDIS_URL + "/set/" + key + "/" + encodeURIComponent(jsonValue);
   const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
+    headers: { Authorization: "Bearer " + REDIS_TOKEN },
   });
   const result = await res.json();
   return result;
@@ -29,7 +29,7 @@ async function redisSet(key, value) {
 async function verifyAuth(request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true;
+  if (cronSecret && authHeader === "Bearer " + cronSecret) return true;
   const token = request.cookies.get("fhf-auth")?.value;
   if (token && process.env.AUTH_SECRET) {
     try {
@@ -84,25 +84,25 @@ export async function POST(request) {
     const monthStart = new Date(currentYear, now.getMonth(), 1);
     const monthEnd = new Date(currentYear, now.getMonth() + 1, 0);
     const ytdStart = new Date(currentYear, 0, 1);
-    const allTrips = body.trips.map((t) => ({ ...t, date: new Date(t.date) }));
-    const weekTrips = allTrips.filter((t) => t.date >= weekStart && t.date <= weekEnd);
-    const monthTrips = allTrips.filter((t) => t.date >= monthStart && t.date <= monthEnd);
-    const ytdTrips = allTrips.filter((t) => t.date >= ytdStart);
-    const sumMiles = (trips) => Math.round(trips.reduce((s, t) => s + (t.miles || 0), 0) * 100) / 100;
+    const allTrips = body.trips.map(function(t) { return Object.assign({}, t, { date: new Date(t.date) }); });
+    const weekTrips = allTrips.filter(function(t) { return t.date >= weekStart && t.date <= weekEnd; });
+    const monthTrips = allTrips.filter(function(t) { return t.date >= monthStart && t.date <= monthEnd; });
+    const ytdTrips = allTrips.filter(function(t) { return t.date >= ytdStart; });
+    var sumMiles = function(trips) { return Math.round(trips.reduce(function(s, t) { return s + (t.miles || 0); }, 0) * 100) / 100; };
     const weekMiles = sumMiles(weekTrips);
     const monthMiles = sumMiles(monthTrips);
     const ytdMiles = sumMiles(ytdTrips);
-    const fmt = (d) => `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+    var fmt = function(d) { return (d.getMonth()+1) + "/" + d.getDate() + "/" + d.getFullYear(); };
     const mileageData = {
       lastUpdated: now.toISOString(),
-      week: { trips: weekTrips.length, miles: weekMiles, deduction: Math.round(weekMiles * IRS_MILEAGE_RATE * 100) / 100, dateRange: `${fmt(weekStart)} - ${fmt(weekEnd)}` },
-      month: { trips: monthTrips.length, miles: monthMiles, deduction: Math.round(monthMiles * IRS_MILEAGE_RATE * 100) / 100, dateRange: `${fmt(monthStart)} - ${fmt(monthEnd)}` },
-      ytd: { trips: ytdTrips.length, miles: ytdMiles, deduction: Math.round(ytdMiles * IRS_MILEAGE_RATE * 100) / 100, dateRange: `${fmt(ytdStart)} - ${fmt(now)}` },
+      week: { trips: weekTrips.length, miles: weekMiles, deduction: Math.round(weekMiles * IRS_MILEAGE_RATE * 100) / 100, dateRange: fmt(weekStart) + " - " + fmt(weekEnd) },
+      month: { trips: monthTrips.length, miles: monthMiles, deduction: Math.round(monthMiles * IRS_MILEAGE_RATE * 100) / 100, dateRange: fmt(monthStart) + " - " + fmt(monthEnd) },
+      ytd: { trips: ytdTrips.length, miles: ytdMiles, deduction: Math.round(ytdMiles * IRS_MILEAGE_RATE * 100) / 100, dateRange: fmt(ytdStart) + " - " + fmt(now) },
       trips: body.trips,
     };
     const redisResult = await redisSet("fhf_mileage_data", mileageData);
     return NextResponse.json({
-      success: true, redisResult,
+      success: true, redisResult: redisResult,
       summary: { week: mileageData.week, month: mileageData.month, ytd: mileageData.ytd },
     });
   } catch (err) {
