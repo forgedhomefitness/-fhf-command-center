@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 
 const CATEGORY_CONFIG = {
@@ -15,15 +14,11 @@ const CATEGORY_CONFIG = {
 function ExpenseCategoryCard({ category, total, items, totalExpenses }) {
   const [expanded, setExpanded] = useState(false);
   const config = CATEGORY_CONFIG[category] || CATEGORY_CONFIG.other;
-  const pct =
-    totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0;
+  const pct = totalExpenses > 0 ? Math.round((total / totalExpenses) * 100) : 0;
 
   return (
     <div className="card">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full text-left"
-      >
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-left">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <span className="text-lg">{config.icon}</span>
@@ -38,24 +33,14 @@ function ExpenseCategoryCard({ category, total, items, totalExpenses }) {
             <span className="text-xs text-dark-500">{pct}%</span>
             <svg
               className={`w-4 h-4 text-dark-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </div>
         <div className="w-full bg-dark-700 rounded-full h-1.5">
-          <div
-            className={`h-1.5 rounded-full bg-brand-500`}
-            style={{ width: `${pct}%` }}
-          />
+          <div className={`h-1.5 rounded-full bg-brand-500`} style={{ width: `${pct}%` }} />
         </div>
       </button>
       {expanded && items.length > 0 && (
@@ -63,9 +48,7 @@ function ExpenseCategoryCard({ category, total, items, totalExpenses }) {
           {items.map((item, i) => (
             <div key={i} className="flex justify-between text-xs">
               <span className="text-dark-300">{item.name}</span>
-              <span className="text-dark-400 font-medium">
-                ${item.amount.toLocaleString()}
-              </span>
+              <span className="text-dark-400 font-medium">${item.amount.toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -74,45 +57,150 @@ function ExpenseCategoryCard({ category, total, items, totalExpenses }) {
   );
 }
 
-function MileageCard({ mileageEstimate }) {
-  if (!mileageEstimate) return null;
+function MileageCard() {
+  const [mileage, setMileage] = useState(null);
+  const [mileageLoading, setMileageLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("week");
+
+  useEffect(() => {
+    async function fetchMileage() {
+      try {
+        const res = await fetch("/api/mileage");
+        if (res.ok) {
+          const data = await res.json();
+          setMileage(data);
+        }
+      } catch (err) {
+        console.error("Mileage fetch error:", err);
+      }
+      setMileageLoading(false);
+    }
+    fetchMileage();
+  }, []);
+
+  if (mileageLoading) {
+    return (
+      <div className="card border border-brand-500/20">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">{"\uD83D\uDE97"}</span>
+          <h3 className="text-sm font-semibold text-brand-400 uppercase tracking-wide">
+            Mileage Tracker
+          </h3>
+        </div>
+        <div className="flex items-center justify-center py-6">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-brand-500 border-t-transparent" />
+</div>
+      </div>
+    );
+  }
+
+  if (!mileage || !mileage.connected) {
+    return (
+      <div className="card border border-dark-600">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">{"\uD83D\uDE97"}</span>
+          <h3 className="text-sm font-semibold text-dark-400 uppercase tracking-wide">
+            Mileage Tracker
+          </h3>
+        </div>
+        <p className="text-xs text-dark-500">Unable to load mileage data.</p>
+      </div>
+    );
+  }
+
+  const tabs = [
+    { key: "week", label: "This Week" },
+    { key: "month", label: "This Month" },
+    { key: "ytd", label: "Year to Date" },
+  ];
+
+  const current = mileage[activeTab] || { trips: 0, miles: 0, deduction: 0, dateRange: "" };
+  const irsRate = mileage.irsRate || 0.725;
+  const lastUpdated = mileage.lastUpdated
+    ? new Date(mileage.lastUpdated).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "Never";
+
   return (
     <div className="card border border-brand-500/20">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-lg">{"\uD83D\uDE97"}</span>
-        <h3 className="text-sm font-semibold text-brand-400 uppercase tracking-wide">
-          Mileage Deduction Estimate
-        </h3>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{"\uD83D\uDE97"}</span>
+          <h3 className="text-sm font-semibold text-brand-400 uppercase tracking-wide">
+            Mileage Tracker
+          </h3>
+        </div>
+        <span className="text-[10px] text-dark-500">
+          Updated: {lastUpdated}
+        </span>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 bg-dark-800 rounded-lg p-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 text-xs font-medium px-3 py-2 rounded-md transition-all ${
+              activeTab === tab.key
+                ? "bg-brand-500/20 text-brand-400 border border-brand-500/30"
+                : "text-dark-400 hover:text-dark-200"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Date Range */}
+      {current.dateRange && (
+        <p className="text-[10px] text-dark-500 mb-3 text-center">
+          {current.dateRange}
+        </p>
+      )}
+
+      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
         <div>
-          <p className="text-xs text-dark-400">Gas Spent</p>
-          <p className="text-lg font-bold text-white">
-            ${mileageEstimate.gasSpent.toLocaleString()}
+          <p className="text-xs text-dark-400">Business Trips</p>
+          <p className="text-xl font-bold text-white">
+            {current.trips.toLocaleString()}
           </p>
         </div>
         <div>
-          <p className="text-xs text-dark-400">Est. Miles</p>
-          <p className="text-lg font-bold text-white">
-            {mileageEstimate.estimatedMiles.toLocaleString()}
+          <p className="text-xs text-dark-400">Business Miles</p>
+          <p className="text-xl font-bold text-white">
+            {current.miles.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
           </p>
         </div>
         <div>
-          <p className="text-xs text-dark-400">IRS Rate</p>
-          <p className="text-lg font-bold text-white">
-            ${mileageEstimate.irsRate}/mi
+          <p className="text-xs text-dark-400">IRS Rate (2026)</p>
+          <p className="text-xl font-bold text-white">
+            $0.725<span className="text-xs text-dark-400">/mi</span>
           </p>
         </div>
         <div>
-          <p className="text-xs text-dark-400">Potential Deduction</p>
-          <p className="text-lg font-bold text-green-400">
-            ${mileageEstimate.potentialDeduction.toLocaleString()}
+          <p className="text-xs text-dark-400">Tax Deduction</p>
+          <p className="text-xl font-bold text-green-400">
+            ${current.deduction.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
         </div>
       </div>
-      <p className="text-xs text-dark-500 bg-dark-800/50 rounded p-2">
-        {mileageEstimate.note}
-      </p>
+
+      {/* Footer Note */}
+      <div className="text-xs text-dark-500 bg-dark-800/50 rounded p-2 flex items-center justify-between">
+        <span>
+          {current.trips === 0
+            ? "No trips logged for this period. Data updates every Saturday."
+            : `${current.miles.toLocaleString(undefined, { maximumFractionDigits: 1 })} mi \u00D7 $${irsRate}/mi = $${current.deduction.toLocaleString(undefined, { minimumFractionDigits: 2 })} deduction`}
+        </span>
+        <span className="text-dark-600">Nissan Altima</span>
+      </div>
     </div>
   );
 }
@@ -128,15 +216,11 @@ export default function ExpensesPage() {
       setLoading(true);
       try {
         const [qbRes, stripeRes] = await Promise.allSettled([
-          fetch(`/api/quickbooks/expenses?period=${period}`).then((r) =>
-            r.json()
-          ),
+          fetch(`/api/quickbooks/expenses?period=${period}`).then((r) => r.json()),
           fetch("/api/stripe").then((r) => r.json()),
         ]);
-        if (qbRes.status === "fulfilled" && qbRes.value.connected)
-          setData(qbRes.value);
-        if (stripeRes.status === "fulfilled" && stripeRes.value.connected)
-          setStripeData(stripeRes.value);
+        if (qbRes.status === "fulfilled" && qbRes.value.connected) setData(qbRes.value);
+        if (stripeRes.status === "fulfilled" && stripeRes.value.connected) setStripeData(stripeRes.value);
       } catch (err) {
         console.error("Failed to fetch expenses:", err);
       }
@@ -145,23 +229,12 @@ export default function ExpensesPage() {
     fetchExpenses();
   }, [period]);
 
-  // Use Stripe for income (actual payments), QB for expenses
-  const stripeIncome =
-    period === "month"
-      ? stripeData?.monthRevenue || 0
-      : stripeData?.yearRevenue || 0;
-  const stripeNet =
-    period === "month"
-      ? stripeData?.monthNetRevenue || 0
-      : stripeData?.yearNetRevenue || 0;
-  const stripeFees =
-    period === "month"
-      ? stripeData?.monthStripeFees || 0
-      : stripeData?.yearStripeFees || 0;
+  const stripeIncome = period === "month" ? stripeData?.monthRevenue || 0 : stripeData?.yearRevenue || 0;
+  const stripeNet = period === "month" ? stripeData?.monthNetRevenue || 0 : stripeData?.yearNetRevenue || 0;
+  const stripeFees = period === "month" ? stripeData?.monthStripeFees || 0 : stripeData?.yearStripeFees || 0;
   const totalExpenses = data?.totalExpenses || 0;
   const netProfit = stripeNet - totalExpenses;
-  const expenseRatio =
-    stripeIncome > 0 ? Math.round((totalExpenses / stripeIncome) * 100) : 0;
+  const expenseRatio = stripeIncome > 0 ? Math.round((totalExpenses / stripeIncome) * 100) : 0;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -203,66 +276,41 @@ export default function ExpensesPage() {
         </div>
       ) : !data ? (
         <div className="card text-center py-10">
-          <p className="text-dark-400">
-            Unable to load expense data. Check QuickBooks connection.
-          </p>
+          <p className="text-dark-400">Unable to load expense data. Check QuickBooks connection.</p>
         </div>
       ) : (
         <>
           {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
-                Gross Revenue
-              </p>
-              <p className="text-2xl font-bold text-green-400">
-                ${stripeIncome.toLocaleString()}
-              </p>
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Gross Revenue</p>
+              <p className="text-2xl font-bold text-green-400">${stripeIncome.toLocaleString()}</p>
               <p className="text-[10px] text-dark-500 mt-1">
-                Net: ${Math.round(stripeNet).toLocaleString()} (after $
-                {Math.round(stripeFees)} fees)
+                Net: ${Math.round(stripeNet).toLocaleString()} (after ${Math.round(stripeFees)} fees)
               </p>
             </div>
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
-                Total Expenses
-              </p>
-              <p className="text-2xl font-bold text-red-400">
-                ${totalExpenses.toLocaleString()}
-              </p>
-              <p className="text-[10px] text-dark-500 mt-1">
-                QuickBooks tracked
-              </p>
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Total Expenses</p>
+              <p className="text-2xl font-bold text-red-400">${totalExpenses.toLocaleString()}</p>
+              <p className="text-[10px] text-dark-500 mt-1">QuickBooks tracked</p>
             </div>
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
-                Net Profit
-              </p>
-              <p
-                className={`text-2xl font-bold ${netProfit >= 0 ? "text-green-400" : "text-red-400"}`}
-              >
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Net Profit</p>
+              <p className={`text-2xl font-bold ${netProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
                 ${Math.round(netProfit).toLocaleString()}
               </p>
-              <p className="text-[10px] text-dark-500 mt-1">
-                After fees + expenses
-              </p>
+              <p className="text-[10px] text-dark-500 mt-1">After fees + expenses</p>
             </div>
             <div className="card">
-              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">
-                Expense Ratio
-              </p>
-              <p className="text-2xl font-bold text-brand-400">
-                {expenseRatio}%
-              </p>
-              <p className="text-[10px] text-dark-500 mt-1">
-                Target: under 30%
-              </p>
+              <p className="text-xs text-dark-400 uppercase tracking-wide mb-1">Expense Ratio</p>
+              <p className="text-2xl font-bold text-brand-400">{expenseRatio}%</p>
+              <p className="text-[10px] text-dark-500 mt-1">Target: under 30%</p>
             </div>
           </div>
 
-          {/* Mileage Estimate */}
+          {/* Mileage Tracker */}
           <div className="mb-6">
-            <MileageCard mileageEstimate={data.mileageEstimate} />
+            <MileageCard />
           </div>
 
           {/* Expense Categories */}
@@ -290,28 +338,21 @@ export default function ExpensesPage() {
             </h3>
             <div className="space-y-2">
               {data.topExpenses.map((exp, i) => {
-                const config =
-                  CATEGORY_CONFIG[exp.category] || CATEGORY_CONFIG.other;
+                const config = CATEGORY_CONFIG[exp.category] || CATEGORY_CONFIG.other;
                 return (
                   <div
                     key={i}
                     className="flex items-center justify-between py-2 border-b border-dark-700 last:border-0"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-dark-500 w-5">
-                        {i + 1}.
-                      </span>
+                      <span className="text-xs text-dark-500 w-5">{i + 1}.</span>
                       <span className="text-sm">{config.icon}</span>
                       <div>
                         <p className="text-sm text-dark-200">{exp.name}</p>
-                        <p className="text-[10px] text-dark-500 uppercase">
-                          {config.label}
-                        </p>
+                        <p className="text-[10px] text-dark-500 uppercase">{config.label}</p>
                       </div>
                     </div>
-                    <span className="text-sm font-bold text-white">
-                      ${exp.amount.toLocaleString()}
-                    </span>
+                    <span className="text-sm font-bold text-white">${exp.amount.toLocaleString()}</span>
                   </div>
                 );
               })}
@@ -322,10 +363,9 @@ export default function ExpensesPage() {
           <div className="mt-6 p-4 rounded-lg border border-dark-700 bg-dark-800/30">
             <p className="text-xs text-dark-400">
               <span className="text-brand-400 font-semibold">CPA Note:</span>{" "}
-              Revenue sourced from Stripe (actual payments processed).
-              Expenses sourced from QuickBooks Online. For tax filing, Turner
-              & Costa PC will reconcile these figures with actual receipts and
-              bank statements. Keep all receipts for expenses over $75.
+              Revenue sourced from Stripe (actual payments processed). Expenses sourced from
+              QuickBooks Online. For tax filing, Turner & Costa PC will reconcile these figures
+              with actual receipts and bank statements. Keep all receipts for expenses over $75.
             </p>
           </div>
         </>
