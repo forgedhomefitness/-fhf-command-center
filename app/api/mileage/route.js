@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
 // — Upstash Redis helpers —
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
@@ -29,6 +30,30 @@ async function redisSet(key, value) {
   } catch (err) {
     console.error("Redis set error:", err);
   }
+}
+
+async function verifyAuth(request) {
+  // Check CRON_SECRET header
+  const authHeader = request.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && authHeader === `Bearer ${cronSecret}`) return true;
+
+  // Check fhf-auth cookie (logged-in dashboard user)
+  const token = request.cookies.get("fhf-auth")?.value;
+  if (token && process.env.AUTH_SECRET) {
+    try {
+      const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+      await jwtVerify(token, secret);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // If no auth configured, allow
+  if (!cronSecret && !process.env.AUTH_SECRET) return true;
+
+  return false;
 }
 
 const IRS_MILEAGE_RATE = 0.725;
@@ -64,20 +89,15 @@ export async function GET() {
   }
 }
 
-// POST endpoint for Saturday automation to push mileage data
 export async function POST(request) {
   try {
-    // Verify cron secret for automated updates
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    const authorized = await verifyAuth(request);
+    if (!authorized) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
 
-    // Validate required fields
     if (!body.trips || !Array.isArray(body.trips)) {
       return NextResponse.json(
         { error: "Missing or invalid trips array" },
@@ -88,7 +108,6 @@ export async function POST(request) {
     const now = new Date();
     const currentYear = now.getFullYear();
 
-    // Calculate week boundaries (Mon-Sun)
     const dayOfWeek = now.getDay();
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
     const weekStart = new Date(now);
@@ -98,36 +117,23 @@ export async function POST(request) {
     weekEnd.setDate(weekStart.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Calculate month boundaries
     const monthStart = new Date(currentYear, now.getMonth(), 1);
     const monthEnd = new Date(currentYear, now.getMonth() + 1, 0);
-
-    // Calculate YTD boundaries
     const ytdStart = new Date(currentYear, 0, 1);
 
-    // Filter trips into periods
-    const allTrips = body.trips.map((t) => ({
-      ...t,
-      date: new Date(t.date),
-    }));
+    const allTrips = body.trips.map((t) => ({ ...t, date: new Date(t.date) }));
 
-    const weekTrips = allTrips.filter(
-      (t) => t.date >= weekStart && t.date <= weekEnd
-    );
-    const monthTrips = allTrips.filter(
-      (t) => t.date >= monthStart && t.date <= monthEnd
-    );
+    const weekTrips = allTrips.filter((t) => t.date >= weekStart && t.date <= weekEnd);
+    const monthTrips = allTrips.filter((t) => t.date >= monthStart && t.date <= monthEnd);
     const ytdTrips = allTrips.filter((t) => t.date >= ytdStart);
 
-    const sumMiles = (trips) =>
-      Math.round(trips.reduce((s, t) => s + (t.miles || 0), 0) * 100) / 100;
+    const sumMiles = (trips) => Math.round(trips.reduce((s, t) => s + (t.miles || 0), 0) * 100) / 100;
 
     const weekMiles = sumMiles(weekTrips);
     const monthMiles = sumMiles(monthTrips);
     const ytdMiles = sumMiles(ytdTrips);
 
-    const formatDate = (d) =>
-      `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+    const formatDate = (d) => `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 
     const mileageData = {
       lastUpdated: now.toISOString(),
@@ -164,9 +170,6 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error("Mileage POST error:", err.message);
-    return NextResponse.json(
-      { error: err.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
