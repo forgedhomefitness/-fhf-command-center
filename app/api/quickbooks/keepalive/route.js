@@ -47,30 +47,32 @@ async function redisSet(key, value) {
   return true;
 }
 
-// ââ Token management âââââââââââââââââââââââââââââââââââââââââââ
-async function getRefreshToken() {
-  const token = await redisGet("qb_refresh_token");
-  if (token) {
-    console.log("[QB] Using refresh token from Redis");
-    return { token, source: "redis" };
+async function redisDel(key) {
+  if (!REDIS_URL || !REDIS_TOKEN) return;
+  try {
+    await fetch(`${REDIS_URL}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${REDIS_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(["DEL", key]),
+    });
+    console.log(`[Redis DEL] Deleted stale key: ${key}`);
+  } catch (err) {
+    console.error(`[Redis DEL] Error: ${err.message}`);
   }
-  const envToken = process.env.QB_REFRESH_TOKEN;
-  if (envToken) {
-    console.log("[QB] WARNING: Using refresh token from env var (Redis was empty)");
-    return { token: envToken, source: "env" };
-  }
-  throw new Error("No refresh token available in Redis or env vars");
 }
 
-async function refreshTokens() {
-  const { token: refreshToken, source } = await getRefreshToken();
+// ââ Token management âââââââââââââââââââââââââââââââââââââââââââ
+async function attemptRefresh(refreshToken, source) {
   const clientId = process.env.QB_CLIENT_ID;
   const clientSecret = process.env.QB_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
     throw new Error("Missing QB_CLIENT_ID or QB_CLIENT_SECRET");
   }
 
-  console.log(`[QB] Refreshing tokens (source: ${source})...`);
+  console.log(`[QB] Attempting token refresh (source: ${source})...`);
 
   const res = await fetch(
     "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
@@ -92,16 +94,44 @@ async function refreshTokens() {
     throw new Error(`Token refresh failed: ${res.status} ${err}`);
   }
 
-  const tokens = await res.json();
+  return await res.json();
+}
 
-  // CRITICAL: Save new tokens to Redis BEFORE returning
-  // Intuit refresh tokens are single-use â the old one is now DEAD.
-  // If we fail to save the new one, we lose access permanently.
-  console.log("[QB] Saving new tokens to Redis...");
+async function refreshTokens() {
+  // Step 1: Try Redis token first
+  const redisToken = await redisGet("qb_refresh_token");
+  if (redisToken) {
+    try {
+      const tokens = await attemptRefresh(redisToken, "redis");
+      console.log("[QB] Redis token worked. Saving new tokens...");
+      await redisSet("qb_access_token", tokens.access_token);
+      await redisSet("qb_refresh_token", tokens.refresh_token);
+      console.log("[QB] New tokens saved and verified in Redis.");
+      return tokens.access_token;
+    } catch (err) {
+      // If invalid_grant, the Redis token is stale â fall through to env var
+      if (err.message.includes("invalid_grant")) {
+        console.warn("[QB] Redis token is STALE (invalid_grant). Clearing and falling back to env var...");
+        await redisDel("qb_refresh_token");
+        await redisDel("qb_access_token");
+      } else {
+        throw err; // Non-grant errors should still fail loudly
+      }
+    }
+  }
+
+  // Step 2: Fall back to env var
+  const envToken = process.env.QB_REFRESH_TOKEN;
+  if (!envToken) {
+    throw new Error("No refresh token available â Redis was stale/empty and QB_REFRESH_TOKEN env var is not set");
+  }
+
+  console.log("[QB] Using refresh token from env var (fallback)...");
+  const tokens = await attemptRefresh(envToken, "env");
+  console.log("[QB] Env var token worked! Saving new tokens to Redis...");
   await redisSet("qb_access_token", tokens.access_token);
   await redisSet("qb_refresh_token", tokens.refresh_token);
-  console.log("[QB] New tokens saved and verified in Redis.");
-
+  console.log("[QB] New tokens saved and verified in Redis. Self-healed.");
   return tokens.access_token;
 }
 
@@ -110,8 +140,11 @@ async function refreshTokens() {
 // Intuit revokes refresh tokens after 100 days of non-use.
 // By refreshing daily, we ensure tokens never expire.
 //
-// IMPORTANT: This route now FAILS LOUDLY if Redis writes fail.
-// A silent Redis failure = lost refresh token = locked out of QBO.
+// SELF-HEALING: If Redis has a stale token (invalid_grant),
+// automatically falls back to env var, refreshes, and saves
+// the new tokens back to Redis. No manual intervention needed.
+//
+// FAILS LOUDLY: If both Redis and env var fail, returns 500.
 // ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 export async function GET(request) {
   const realmId = process.env.QB_REALM_ID;
