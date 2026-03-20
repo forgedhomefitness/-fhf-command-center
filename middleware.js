@@ -28,10 +28,26 @@ export async function middleware(request) {
 
   // Check auth cookie
   const token = request.cookies.get("fhf-auth")?.value;
-
   if (!token) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     return NextResponse.redirect(new URL("/login", request.url));
   }
+
+  try {
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
+    await jwtVerify(token, secret);
+    return NextResponse.next();
+  } catch {
+    const response = pathname.startsWith("/api/")
+      ? NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      : NextResponse.redirect(new URL("/login", request.url));
+    response.cookies.delete("fhf-auth");
+    return response;
+  }
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};
