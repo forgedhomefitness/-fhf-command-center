@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/api/stripe",
   "/api/analytics",
   "/api/mileage",
+  "/api/newsletter",
 ];
 
 export async function middleware(request) {
@@ -34,20 +35,3 @@ export async function middleware(request) {
     }
     return NextResponse.redirect(new URL("/login", request.url));
   }
-
-  try {
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET);
-    await jwtVerify(token, secret);
-    return NextResponse.next();
-  } catch {
-    const response = pathname.startsWith("/api/")
-      ? NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-      : NextResponse.redirect(new URL("/login", request.url));
-    response.cookies.delete("fhf-auth");
-    return response;
-  }
-}
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-};
