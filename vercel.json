@@ -27,6 +27,22 @@
     {
       "path": "/api/newsletter?mode=send&tz=est",
       "schedule": "30 11 * * 2"
+    },
+    {
+      "path": "/api/monthly-newsletter?mode=preview&tz=edt",
+      "schedule": "0 13 24 * *"
+    },
+    {
+      "path": "/api/monthly-newsletter?mode=preview&tz=est",
+      "schedule": "0 14 24 * *"
+    },
+    {
+      "path": "/api/monthly-newsletter?mode=send&tz=edt",
+      "schedule": "0 13 25 * *"
+    },
+    {
+      "path": "/api/monthly-newsletter?mode=send&tz=est",
+      "schedule": "0 14 25 * *"
     }
   ]
 }
