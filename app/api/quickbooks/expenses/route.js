@@ -5,7 +5,7 @@ const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
 async function redisGet(key) {
-  try {
+  try 
     const res = await fetch(`${REDIS_URL}/get/${key}`, {
       headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
     });
@@ -95,7 +95,7 @@ function isExpenseGroup(groupName) {
 }
 
 // ââ IRS Mileage Rate âââââââââââââââââââââââââââââââââââââââââ
-const IRS_MILEAGE_RATE_2026 = 0.7; // 2026 standard rate (update annually)
+const IRS_MILEAGE_RATE_2026 = 0.725; // 2026 standard rate (update annually)
 
 // ââ Expense categories for personal training âââââââââââââââââ
 const EXPENSE_CATEGORIES = {
