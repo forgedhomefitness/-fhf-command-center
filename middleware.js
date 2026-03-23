@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   "/api/analytics",
   "/api/mileage",
   "/api/newsletter",
+  "/api/monthly-newsletter",
 ];
 
 export async function middleware(request) {
