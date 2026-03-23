@@ -12,22 +12,20 @@ const PUBLIC_PATHS = [
   "/api/mileage",
   "/api/newsletter",
   "/api/monthly-newsletter",
+  "/api/send-report",
 ];
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
   if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
-  // If auth is not configured, allow all requests (safe deploy)
   if (!process.env.AUTH_SECRET) {
     return NextResponse.next();
   }
 
-  // Check auth cookie
   const token = request.cookies.get("fhf-auth")?.value;
   if (!token) {
     if (pathname.startsWith("/api/")) {
