@@ -299,27 +299,8 @@ export async function GET(request) {
         subject: newsletter.subject,
         resendId: result.id,
       });
-    } else if (mode === "send") {
-      // Tuesday â send ANOTHER reminder to Matt (does NOT auto-send to clients)
-      const reviewHtml = buildReviewWrapper(newsletter, source, weekIndex + 1, CLIENT_EMAILS);
-      const result = await sendEmail({
-        to: MATT_EMAIL,
-        subject: `[SEND TODAY?] Newsletter: ${newsletter.subject}`,
-        html: reviewHtml,
-      });
-
-      return NextResponse.json({
-        success: true,
-        mode: "send-reminder",
-        weekNumber: weekIndex + 1,
-        totalWeeks,
-        source,
-        subject: newsletter.subject,
-        note: "Sent to Matt for approval only â NOT auto-sent to clients",
-        resendId: result.id,
-      });
-    } else if (mode === "approve") {
-      // Manual trigger â Matt approved, send to all clients now
+    } else if (mode === "send" || mode === "approve") {
+      // Tuesday (auto) or manual approve â send newsletter to Matt + BCC all clients
       const html = buildEmailHTML(newsletter);
       const result = await sendEmail({
         to: MATT_EMAIL,
@@ -330,9 +311,13 @@ export async function GET(request) {
 
       return NextResponse.json({
         success: true,
-        mode: "approved-sent",
+        mode: mode === "send" ? "auto-sent" : "approved-sent",
+        weekNumber: weekIndex + 1,
+        totalWeeks,
+        source,
         subject: newsletter.subject,
         recipientCount: CLIENT_EMAILS.length + 1,
+        message: `Newsletter sent to Matt + ${CLIENT_EMAILS.length} clients`,
         resendId: result.id,
       });
     } else {
