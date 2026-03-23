@@ -249,25 +249,8 @@ export async function GET(request) {
         message: "Preview sent to Matt with review wrapper. Awaiting approval.",
         resendId: result.id,
       });
-    } else if (isSend) {
-      // 25th â SEND mode: Send Matt a final reminder (NOT auto-send to clients)
-      const reminderHtml = buildSendApprovalReminder(html, monthName, year);
-      const result = await sendEmail({
-        to: MATT_EMAIL,
-        subject: `[ACTION] ${subject} â Final Approval Required to Send to Clients`,
-        html: reminderHtml,
-      });
-
-      return NextResponse.json({
-        success: true,
-        mode: "send",
-        month: `${monthName} ${year}`,
-        subject,
-        message: "Final approval reminder sent to Matt. Newsletter will NOT send until approved.",
-        resendId: result.id,
-      });
-    } else if (isApprove) {
-      // APPROVE mode: Actually send the newsletter to Matt + BCC all clients
+    } else if (isSend || isApprove) {
+      // 25th (auto) or manual approve â send newsletter to Matt + BCC all clients
       const result = await sendEmail({
         to: MATT_EMAIL,
         bcc: CLIENT_EMAILS,
@@ -277,7 +260,7 @@ export async function GET(request) {
 
       return NextResponse.json({
         success: true,
-        mode: "approve",
+        mode: isSend ? "auto-sent" : "approved-sent",
         month: `${monthName} ${year}`,
         subject,
         recipientCount: CLIENT_EMAILS.length + 1,
