@@ -5,7 +5,7 @@ const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
 async function redisGet(key) {
-  try 
+  try  {
     const res = await fetch(`${REDIS_URL}/get/${key}`, {
       headers: { Authorization: `Bearer ${REDIS_TOKEN}` },
     });
