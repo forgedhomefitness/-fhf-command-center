@@ -13,6 +13,7 @@ const PUBLIC_PATHS = [
   "/api/newsletter",
   "/api/monthly-newsletter",
   "/api/send-report",
+    "/api/cron",
 ];
 
 export async function middleware(request) {
