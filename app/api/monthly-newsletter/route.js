@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 // âââ CONFIG ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
-const FROM_EMAIL = "Forged Home Fitness <noreply@forgedhomefitness.com>";
+const FROM_EMAIL = "Forged Home Fitness <onboarding@resend.dev>";
 const MATT_EMAIL = "forgedhomefitness@gmail.com";
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
