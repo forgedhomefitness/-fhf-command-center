@@ -8,7 +8,7 @@ const MATT_EMAIL = "forgedhomefitness@gmail.com";
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
 const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// Same client list as weekly newsletter â single source of truth
+// Same client list as weekly newsletter &mdash; single source of truth
 const CLIENT_EMAILS = [
   "mma@afergan.com",
   "jonblotner@gmail.com",
@@ -58,7 +58,7 @@ async function redisSet(key, value, exSeconds) {
 
 // âââ GET MONTH NAME âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function getTargetMonth() {
-  // Cron runs on 24th/25th â newsletter is for the NEXT month
+  // Cron runs on 24th/25th &mdash; newsletter is for the NEXT month
   const now = new Date();
   const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const monthName = next.toLocaleString("en-US", { month: "long" });
@@ -110,7 +110,7 @@ function buildPreviewWrapper(newsletterHtml, monthName, year) {
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333;">
       <div style="background-color: #f5f5f5; border-left: 4px solid #001F3F; padding: 20px; margin-bottom: 30px; border-radius: 4px;">
-        <h2 style="margin: 0 0 15px 0; color: #001F3F; font-size: 18px;">ð NEWSLETTER REVIEW â Action Required</h2>
+        <h2 style="margin: 0 0 15px 0; color: #001F3F; font-size: 18px;">ð NEWSLETTER REVIEW &mdash; Action Required</h2>
         <p style="margin: 0 0 10px 0;"><strong>Month:</strong> ${monthName} ${year}</p>
         <p style="margin: 0 0 10px 0;"><strong>Preview Generated:</strong> ${timestamp}</p>
 
@@ -229,15 +229,15 @@ export async function GET(request) {
       );
     }
 
-    const subject = newsletter.subject || `Forged Home Fitness â ${monthName} ${year} Newsletter`;
+    const subject = newsletter.subject || `Forged Home Fitness &mdash; ${monthName} ${year} Newsletter`;
     const html = newsletter.html;
 
     if (isPreview) {
-      // 24th â PREVIEW mode: Send Matt a review wrapper with newsletter content
+      // 24th &mdash; PREVIEW mode: Send Matt a review wrapper with newsletter content
       const previewHtml = buildPreviewWrapper(html, monthName, year);
       const result = await sendEmail({
         to: MATT_EMAIL,
-        subject: `[REVIEW] ${subject} â Approve or Request Changes`,
+        subject: `[REVIEW] ${subject} &mdash; Approve or Request Changes`,
         html: previewHtml,
       });
 
@@ -250,7 +250,7 @@ export async function GET(request) {
         resendId: result.id,
       });
     } else if (isSend || isApprove) {
-      // 25th (auto) or manual approve â send newsletter to Matt + BCC all clients
+      // 25th (auto) or manual approve &mdash; send newsletter to Matt + BCC all clients
       const result = await sendEmail({
         to: MATT_EMAIL,
         bcc: CLIENT_EMAILS,
