@@ -26,35 +26,35 @@ const NEWSLETTERS = [
   {
     subject: "The $0.10/Day Supplement That Builds Muscle AND Brainpower After 40",
     title: "The $0.10/Day Supplement That Builds Muscle AND Brainpower After 40",
-    intro: `<p style="margin: 0 0 20px 0;">You've probably heard about creatine if you've spent any time around gyms. But here's what most people don't know: it's not just for building muscle. Recent research shows creatine is one of the most studied and safest supplements out there â and it does something most people never expect.</p><p style="margin: 0 0 25px 0;">For anyone over 40, it's a game-changer. And it costs about a dime a day.</p>`,
+    intro: `<p style="margin: 0 0 20px 0;">You've probably heard about creatine if you've spent any time around gyms. But here's what most people don't know: it's not just for building muscle. Recent research shows creatine is one of the most studied and safest supplements out there &mdash; and it does something most people never expect.</p><p style="margin: 0 0 25px 0;">For anyone over 40, it's a game-changer. And it costs about a dime a day.</p>`,
     studies: [
       { heading: "Study 1: Creatine and Brain Power", source: "Oxford Academic/Nutrition Reviews", summary: "83% of studies showed positive relationships between creatine and cognition in older adults. Your brain needs energy just like your muscles do.", url: "https://academic.oup.com/nutritionreviews/advance-article/doi/10.1093/nutrit/nuaf135/8253584" },
       { heading: "Study 2: Muscle and Strength", source: "PMC", summary: "Combined with resistance training, creatine significantly improves strength, lean muscle mass, and bone area.", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC12272710/" },
       { heading: "Study 3: Strength Gains (Meta-Analysis)", source: "PMC", summary: "Increased lean tissue mass by 1.37 kg and improved upper/lower body strength across multiple studies.", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC12506341/" },
     ],
-    mattsTake: "I recommend creatine monohydrate to almost every client over 40. 3-5 grams a day, every day. It's cheap, it's safe, and the research keeps stacking up. Mix it in your morning water and forget about it. That's it. No loading phase, no cycling â just consistent, simple supplementation that works.",
+    mattsTake: "I recommend creatine monohydrate to almost every client over 40. 3-5 grams a day, every day. It's cheap, it's safe, and the research keeps stacking up. Mix it in your morning water and forget about it. That's it. No loading phase, no cycling &mdash; just consistent, simple supplementation that works.",
   },
   {
     subject: "Why Your Scale Is Lying to You (And What to Do About It)",
     title: "Why Your Scale Is Lying to You (And What to Do About It)",
-    intro: `<p style="margin: 0 0 20px 0;">You step on the scale. It hasn't budged. So you think your training isn't working.</p><p style="margin: 0 0 25px 0;">Wrong. You could be gaining muscle, losing fat, and transforming your body â and the scale would tell you nothing. That's why I stopped caring about what the scale says years ago. There's a tool that actually shows what's happening.</p>`,
+    intro: `<p style="margin: 0 0 20px 0;">You step on the scale. It hasn't budged. So you think your training isn't working.</p><p style="margin: 0 0 25px 0;">Wrong. You could be gaining muscle, losing fat, and transforming your body &mdash; and the scale would tell you nothing. That's why I stopped caring about what the scale says years ago. There's a tool that actually shows what's happening.</p>`,
     studies: [
       { heading: "Study 1: DEXA Accuracy", source: "Accurate Imaging Diagnostics (2025)", summary: "DEXA produces nearly identical measurements to full-body CT scans. This is the gold standard for body composition.", url: "https://accurateimagingdiagnostics.com/what-a-2025-study-tells-us-about-the-accuracy-of-dexa-scans-for-measuring-fat-and-muscle/" },
       { heading: "Study 2: What DEXA Actually Tells You", source: "Revolution Health (2025)", summary: "DEXA measures fat distribution, lean muscle, visceral fat, and bone density with superior precision.", url: "https://revolutionhealth.org/blogs/news/dexa-for-body-composition-in-2025" },
       { heading: "Study 3: Bone Health Screening", source: "USPSTF", summary: "All women 65+ should be screened; postmenopausal women under 65 with risk factors should also get tested. DEXA is the standard.", url: "https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/osteoporosis-screening" },
     ],
-    mattsTake: "I tell every client â throw your scale away. Two people at the same weight can look completely different. A DEXA scan shows you what's actually happening: muscle, fat, bone density. It's the only number that matters. Ask your doctor about getting one.",
+    mattsTake: "I tell every client &mdash; throw your scale away. Two people at the same weight can look completely different. A DEXA scan shows you what's actually happening: muscle, fat, bone density. It's the only number that matters. Ask your doctor about getting one.",
   },
   {
     subject: "The #1 Thing You Can Do to Live Longer (It's Not Cardio)",
     title: "The #1 Thing You Can Do to Live Longer (It's Not Cardio)",
-    intro: `<p style="margin: 0 0 20px 0;">Everyone wants to live longer. We spend money on supplements, doctors' visits, and fancy diets hoping for the magic bullet.</p><p style="margin: 0 0 25px 0;">But the research is loud and clear. If you want to actually live longer â not just look good, but actually add years to your life â there's one thing that works better than everything else. And it's weight training.</p>`,
+    intro: `<p style="margin: 0 0 20px 0;">Everyone wants to live longer. We spend money on supplements, doctors' visits, and fancy diets hoping for the magic bullet.</p><p style="margin: 0 0 25px 0;">But the research is loud and clear. If you want to actually live longer &mdash; not just look good, but actually add years to your life &mdash; there's one thing that works better than everything else. And it's weight training.</p>`,
     studies: [
       { heading: "Study 1: Weight Training and Mortality", source: "Oxford Academic (IJE)", summary: "Any weight training is associated with 6% lower all-cause mortality and 8% lower cardiovascular mortality.", url: "https://academic.oup.com/ije/article/53/3/dyae074/7687204" },
       { heading: "Study 2: Maximum Risk Reduction", source: "PubMed Meta-Analysis", summary: "Maximum risk reduction of 27% at around 60 minutes per week. Combined with aerobic exercise: 40% reduction in mortality risk.", url: "https://pubmed.ncbi.nlm.nih.gov/35599175/" },
       { heading: "Study 3: Resistance Training for Sarcopenia", source: "PMC", summary: "Individualized resistance training effectively improves muscle strength and function, directly translating to longer, more independent life.", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC12602684/" },
     ],
-    mattsTake: "This is why I do what I do. The science is clear â lifting weights is the single most effective thing you can do to live longer and live better. And you don't need to be in the gym 2 hours a day. 60 minutes a week of real resistance training changes everything.",
+    mattsTake: "This is why I do what I do. The science is clear &mdash; lifting weights is the single most effective thing you can do to live longer and live better. And you don't need to be in the gym 2 hours a day. 60 minutes a week of real resistance training changes everything.",
   },
   {
     subject: "You're Probably Not Eating Enough Protein (Here's How Much You Actually Need)",
@@ -65,12 +65,12 @@ const NEWSLETTERS = [
       { heading: "Study 2: Per-Meal Protein Timing", source: "MDPI Nutrition (2025)", summary: "25-30g per meal maximizes muscle protein synthesis, and 40g pre-sleep improves overnight synthesis.", url: "https://www.mdpi.com/2072-6643/17/15/2461" },
       { heading: "Study 3: Meal Distribution", source: "Science Direct Meta-Analysis", summary: "Even distribution of protein across meals produces 25% greater muscle protein synthesis versus skewed intake.", url: "https://www.sciencedirect.com/science/article/pii/S1568163724001430" },
     ],
-    mattsTake: "Most of my clients are undereating protein when we start working together. If you weigh 170 lbs, you need at least 90-120 grams a day. Spread it out â 30g at breakfast, lunch, dinner, and a shake or Greek yogurt before bed.",
+    mattsTake: "Most of my clients are undereating protein when we start working together. If you weigh 170 lbs, you need at least 90-120 grams a day. Spread it out &mdash; 30g at breakfast, lunch, dinner, and a shake or Greek yogurt before bed.",
   },
   {
     subject: "The Vitamin 42% of Americans Are Deficient In (And Why It Matters After 40)",
     title: "The Vitamin 42% of Americans Are Deficient In (And Why It Matters After 40)",
-    intro: `<p style="margin: 0 0 20px 0;">Vitamin D is one of the most important things your body needs â and most people aren't getting enough of it. In New England especially, we just don't get enough sun to produce it naturally.</p><p style="margin: 0 0 25px 0;">If you're over 40, bone health matters. A lot. And vitamin D is the key to making sure your bones stay strong and your calcium actually gets absorbed.</p>`,
+    intro: `<p style="margin: 0 0 20px 0;">Vitamin D is one of the most important things your body needs &mdash; and most people aren't getting enough of it. In New England especially, we just don't get enough sun to produce it naturally.</p><p style="margin: 0 0 25px 0;">If you're over 40, bone health matters. A lot. And vitamin D is the key to making sure your bones stay strong and your calcium actually gets absorbed.</p>`,
     studies: [
       { heading: "Study 1: Vitamin D and Calcium Absorption", source: "PMC Expert Consensus (2025)", summary: "Maintain serum vitamin D levels at 30 ng/mL or above. Adequate vitamin D increases calcium absorption by 30-40%.", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11836767/" },
       { heading: "Study 2: Daily Supplementation Works Better", source: "PMC Meta-Analysis", summary: "Daily calcium and vitamin D supplementation reduced fracture risk more effectively than intermittent dosing.", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC12506016/" },
@@ -81,13 +81,13 @@ const NEWSLETTERS = [
   {
     subject: "One Bad Night of Sleep Kills 18% of Your Muscle Growth",
     title: "One Bad Night of Sleep Kills 18% of Your Muscle Growth",
-    intro: `<p style="margin: 0 0 20px 0;">You can crush your workouts. You can hit your protein targets. You can do everything right in the gym.</p><p style="margin: 0 0 25px 0;">But if you're not sleeping, you're not building. Because your body doesn't build muscle in the gym â it builds muscle while you sleep.</p>`,
+    intro: `<p style="margin: 0 0 20px 0;">You can crush your workouts. You can hit your protein targets. You can do everything right in the gym.</p><p style="margin: 0 0 25px 0;">But if you're not sleeping, you're not building. Because your body doesn't build muscle in the gym &mdash; it builds muscle while you sleep.</p>`,
     studies: [
       { heading: "Study 1: Growth Hormone and Sleep", source: "UC Berkeley (2025)", summary: "Growth hormone released during sleep is critical for muscle repair and bone strengthening.", url: "https://news.berkeley.edu/2025/09/08/sleep-strengthens-muscle-and-bone-by-boosting-growth-hormone-levels-uc-berkeley-researchers-discover-how/" },
       { heading: "Study 2: Sleep Deprivation and Hormones", source: "MDPI (2025)", summary: "Insufficient sleep elevates cortisol and reduces testosterone and growth hormone.", url: "https://www.mdpi.com/2077-0383/14/21/7606" },
       { heading: "Study 3: Muscle Protein Synthesis Loss", source: "PMC", summary: "One night of sleep deprivation reduces muscle protein synthesis by 18% and testosterone by 22%.", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC7785053/" },
     ],
-    mattsTake: "You can train perfectly and eat perfectly, but if you're not sleeping 7+ hours, you're leaving results on the table. Your body builds muscle while you sleep â not in the gym. I'm in bed by 8:15 every night. It's not sexy, but it works.",
+    mattsTake: "You can train perfectly and eat perfectly, but if you're not sleeping 7+ hours, you're leaving results on the table. Your body builds muscle while you sleep &mdash; not in the gym. I'm in bed by 8:15 every night. It's not sexy, but it works.",
   },
   {
     subject: "How Your Workouts Are Secretly Optimizing Your Hormones",
@@ -98,7 +98,7 @@ const NEWSLETTERS = [
       { heading: "Study 2: Heavy Resistance Training Response", source: "Journal of Applied Physiology", summary: "Older men show significant testosterone increases and cortisol decreases with heavy-resistance training.", url: "https://journals.physiology.org/doi/full/10.1152/jappl.1999.87.3.982" },
       { heading: "Study 3: Compound Movement Hormonal Response", source: "PMC (2025)", summary: "Resistance training 2-3x per week with compound movements produces testosterone elevation.", url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC11591795/" },
     ],
-    mattsTake: "Every session we do together is doing more than building muscle. Compound movements â squats, deadlifts, presses â trigger your body to produce more testosterone and growth hormone naturally. No pills, no injections. Just hard work with the right programming.",
+    mattsTake: "Every session we do together is doing more than building muscle. Compound movements &mdash; squats, deadlifts, presses &mdash; trigger your body to produce more testosterone and growth hormone naturally. No pills, no injections. Just hard work with the right programming.",
   },
   {
     subject: "Lifting Weights Could Cut Your Dementia Risk by 45%",
@@ -109,7 +109,7 @@ const NEWSLETTERS = [
       { heading: "Study 2: Cognitive Function and Brain Power", source: "Frontiers in Psychiatry (2025)", summary: "Resistance training significantly enhanced cognitive function, working memory, and verbal learning when done 2x per week for 6+ months.", url: "https://www.frontiersin.org/journals/psychiatry/articles/10.3389/fpsyt.2025.1708244/full" },
       { heading: "Study 3: Activity Level and Dementia Risk", source: "Johns Hopkins (2025)", summary: "High levels of physical activity lower dementia risk by up to 45%.", url: "https://publichealth.jhu.edu/2025/small-amounts-of-moderate-to-vigorous-physical-activity-are-associated-with-big-reductions-in-dementia-risk" },
     ],
-    mattsTake: "This one hits home. We all know someone affected by dementia or Alzheimer's. The research is clear â what we do in our sessions doesn't just build your body, it protects your brain. Two sessions a week. That's all it takes. You're already doing it.",
+    mattsTake: "This one hits home. We all know someone affected by dementia or Alzheimer's. The research is clear &mdash; what we do in our sessions doesn't just build your body, it protects your brain. Two sessions a week. That's all it takes. You're already doing it.",
   },
 ];
 
@@ -122,7 +122,7 @@ function buildEmailHTML(newsletter) {
     .map(
       (s) => `
         <h3 style="margin: 25px 0 15px 0; font-size: 18px; color: #001F3F; border-left: 4px solid #FED402; padding-left: 15px;">${s.heading}</h3>
-        <p style="margin: 0 0 10px 0; color: #555555; font-size: 15px;"><strong>${s.source}</strong> â ${s.summary}</p>
+        <p style="margin: 0 0 10px 0; color: #555555; font-size: 15px;"><strong>${s.source}</strong> &mdash; ${s.summary}</p>
         <p style="margin: 0 0 20px 0;"><a href="${s.url}" style="color: #FED402; text-decoration: none; font-weight: bold;">Read the study &rarr;</a></p>`
     )
     .join("");
@@ -149,7 +149,7 @@ function buildEmailHTML(newsletter) {
     <p style="margin: 0; color: #333333; font-size: 15px;">Reply to this email or text me at <strong>774-283-3831</strong></p>
   </td></tr>
   <tr><td style="padding: 20px; text-align: center; background-color: #001F3F; color: #ffffff; font-size: 13px;">
-    <p style="margin: 0 0 8px 0;">Matt Doherty â Forged Home Fitness</p>
+    <p style="margin: 0 0 8px 0;">Matt Doherty &mdash; Forged Home Fitness</p>
     <p style="margin: 0 0 8px 0;">Premium In-Home Personal Training</p>
     <p style="margin: 0;"><a href="https://www.forgedhomefitness.com" style="color: #FED402; text-decoration: none;">www.forgedhomefitness.com</a></p>
   </td></tr>
@@ -228,7 +228,7 @@ function buildReviewWrapper(newsletter, source, weekNumber, clientEmails) {
 <body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, sans-serif;">
 <table style="width: 100%; max-width: 650px; margin: 0 auto; background: #fff; border-collapse: collapse;">
   <tr><td style="padding: 25px; background: #001F3F; color: #FED402; font-size: 20px; font-weight: bold;">
-    NEWSLETTER REVIEW â Your Approval Needed
+    NEWSLETTER REVIEW &mdash; Your Approval Needed
   </td></tr>
   <tr><td style="padding: 25px; font-size: 15px; color: #333; line-height: 1.6;">
     <p><strong>Subject Line:</strong> ${newsletter.subject}</p>
@@ -282,7 +282,7 @@ export async function GET(request) {
     const { newsletter, source } = await getNewsletter(totalWeeks, weekIndex);
 
     if (mode === "preview") {
-      // Monday â send Matt the newsletter with review context
+      // Monday &mdash; send Matt the newsletter with review context
       const reviewHtml = buildReviewWrapper(newsletter, source, weekIndex + 1, CLIENT_EMAILS);
       const result = await sendEmail({
         to: MATT_EMAIL,
@@ -300,7 +300,7 @@ export async function GET(request) {
         resendId: result.id,
       });
     } else if (mode === "send" || mode === "approve") {
-      // Tuesday (auto) or manual approve â send newsletter to Matt + BCC all clients
+      // Tuesday (auto) or manual approve &mdash; send newsletter to Matt + BCC all clients
       const html = buildEmailHTML(newsletter);
       const result = await sendEmail({
         to: MATT_EMAIL,
