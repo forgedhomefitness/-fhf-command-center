@@ -18,24 +18,25 @@ function getCurrentPhase() {
 }
 
 function MonthlyCard({ label, amount, target, color, subtitle, netAmount }) {
-  const pct =
-    target > 0 ? Math.min(100, Math.round((amount / target) * 100)) : 0;
+  const pct = target > 0 ? Math.min(100, Math.round((amount / target) * 100)) : 0;
+
   const barColor =
     pct >= 100
       ? "bg-green-500"
       : pct >= 75
-      ? "bg-brand-500"
-      : pct >= 50
-      ? "bg-yellow-500"
-      : "bg-red-500";
+        ? "bg-brand-500"
+        : pct >= 50
+          ? "bg-yellow-500"
+          : "bg-red-500";
+
   const pctColor =
     pct >= 100
       ? "text-green-400"
       : pct >= 75
-      ? "text-brand-400"
-      : pct >= 50
-      ? "text-yellow-400"
-      : "text-red-400";
+        ? "text-brand-400"
+        : pct >= 50
+          ? "text-yellow-400"
+          : "text-red-400";
 
   return (
     <div className={`rounded-xl border p-5 ${color}`}>
@@ -55,7 +56,9 @@ function MonthlyCard({ label, amount, target, color, subtitle, netAmount }) {
           </span>
         </p>
       )}
-      {subtitle && <p className="text-xs text-dark-400 mb-3">{subtitle}</p>}
+      {subtitle && (
+        <p className="text-xs text-dark-400 mb-3">{subtitle}</p>
+      )}
       <div className="w-full bg-dark-700/50 rounded-full h-2.5 mb-2">
         <div
           className={`${barColor} h-2.5 rounded-full transition-all duration-500`}
@@ -90,38 +93,15 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
   const phase = PHASES[getCurrentPhase()];
   const monthTarget = Math.round(phase.annual / 12);
 
-  // Earned revenue from Stripe (actual payments received)
-  const monthEarned = stripeData?.monthRevenue ?? acuityData?.monthEarnedRevenue ?? 0;
-
-  // Projected uses Acuity (includes scheduled future sessions)
+  const monthEarned = acuityData?.monthEarnedRevenue ?? stripeData?.monthRevenue ?? 0;
   const monthProjected = acuityData?.monthProjectedRevenue ?? monthEarned;
-
   const completedCount = acuityData?.monthCompletedCount ?? stripeData?.monthChargeCount ?? 0;
   const scheduledCount = acuityData?.monthScheduledCount ?? 0;
-
-  // Net revenue from Stripe (actual fees deducted)
-  const earnedNet = stripeData?.monthNetRevenue ?? null;
-
-  // Projected net: use actual Stripe fee rate applied to projected total
-  const projectedFees =
-    monthProjected > 0
-      ? Math.round(
-          (monthProjected * 0.029 + (completedCount + scheduledCount) * 0.3) *
-            100
-        ) / 100
-      : 0;
-  const projectedNet =
-    monthProjected > 0
-      ? Math.round((monthProjected - projectedFees) * 100) / 100
-      : null;
+  const monthNetRevenue = stripeData?.monthNetRevenue ?? null;
 
   const now = new Date();
   const monthName = now.toLocaleString("en-US", { month: "long" });
-  const daysInMonth = new Date(
-    now.getFullYear(),
-    now.getMonth() + 1,
-    0
-  ).getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const dayOfMonth = now.getDate();
   const daysLeft = daysInMonth - dayOfMonth;
 
@@ -132,7 +112,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           {monthName} Revenue
         </h2>
         <span className="text-xs text-dark-500">
-          Day {dayOfMonth} of {daysInMonth} - {daysLeft} days left
+          Day {dayOfMonth} of {daysInMonth} -{daysLeft} days left
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -142,7 +122,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           target={monthTarget}
           color="border-dark-700 bg-dark-800/60"
           subtitle={`${completedCount} sessions completed`}
-          netAmount={earnedNet}
+          netAmount={monthNetRevenue}
         />
         <MonthlyCard
           label="Projected Total"
@@ -150,14 +130,14 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           target={monthTarget}
           color="border-brand-500/30 bg-brand-500/5"
           subtitle={`${completedCount} completed + ${scheduledCount} scheduled`}
-          netAmount={projectedNet}
+          netAmount={monthProjected > 0 ? Math.round((monthProjected - (monthProjected * 0.029 + (completedCount + scheduledCount) * 0.3)) * 100) / 100 : null}
         />
         <MonthlyCard
           label="Monthly Target"
           amount={monthTarget}
           target={monthTarget}
           color="border-dark-600 bg-dark-800/40"
-          subtitle={`${phase.name} - $${phase.annual.toLocaleString()}/yr`}
+          subtitle={`${phase.name} -$${phase.annual.toLocaleString()}/yr`}
         />
       </div>
     </div>
