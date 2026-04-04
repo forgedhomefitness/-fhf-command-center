@@ -1,8 +1,12 @@
 {
-    "crons": [
-          {
-                  "path": "/api/cron/daily",
-                  "schedule": "30 10 * * *"
-          }
-    ]
+  "crons": [
+    {
+      "path": "/api/reports/weekly",
+      "schedule": "45 9 * * 6"
+    },
+    {
+      "path": "/api/quickbooks/keepalive",
+      "schedule": "0 10 * * *"
+    }
+  ]
 }
