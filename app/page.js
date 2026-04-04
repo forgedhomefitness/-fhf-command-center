@@ -44,7 +44,7 @@ function WingateCountdown() {
         </span>
       </div>
       <p className="text-xs text-dark-400 mb-3">
-        July 1, 2026 &middot; ~$2,600/mo guaranteed
+        July 1, 2026 · ~$2,600/mo guaranteed
       </p>
       <div className="w-full bg-dark-700 rounded-full h-2 mb-4">
         <div
@@ -112,8 +112,8 @@ function SessionPaceTracker({ weekSessions, lastWeekSessions }) {
             pct >= 80
               ? "text-green-400 bg-green-500/10"
               : pct >= 50
-              ? "text-yellow-400 bg-yellow-500/10"
-              : "text-red-400 bg-red-500/10"
+                ? "text-yellow-400 bg-yellow-500/10"
+                : "text-red-400 bg-red-500/10"
           }`}
         >
           {pct >= 80 ? "On Track" : pct >= 50 ? "Behind" : "At Risk"}
@@ -159,14 +159,13 @@ export default function Dashboard() {
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [stripeRes, acuityRes, qbRes, igRes, analyticsRes] =
-      await Promise.allSettled([
-        fetch("/api/stripe").then((r) => r.json()),
-        fetch("/api/acuity").then((r) => r.json()),
-        fetch("/api/quickbooks").then((r) => r.json()),
-        fetch("/api/instagram").then((r) => r.json()),
-        fetch("/api/analytics").then((r) => r.json()),
-      ]);
+    const [stripeRes, acuityRes, qbRes, igRes, analyticsRes] = await Promise.allSettled([
+      fetch("/api/stripe").then((r) => r.json()),
+      fetch("/api/acuity").then((r) => r.json()),
+      fetch("/api/quickbooks").then((r) => r.json()),
+      fetch("/api/instagram").then((r) => r.json()),
+      fetch("/api/analytics").then((r) => r.json()),
+    ]);
 
     if (stripeRes.status === "fulfilled") setStripe(stripeRes.value);
     if (acuityRes.status === "fulfilled") setAcuity(acuityRes.value);
@@ -184,12 +183,16 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  // All financial figures from Stripe (actual payments)
+  // Calculate net revenue for Year Revenue card
   const yearGross = stripe?.yearRevenue || 0;
   const yearNet = stripe?.yearNetRevenue || 0;
-  const weekGross = stripe?.weekRevenue ?? 0;
-  const weekStripeFees = stripe?.weekStripeFees ?? 0;
-  const weekNet = stripe?.weekNetRevenue ?? 0;
+
+  // Calculate net for weekly revenue
+  const weekGross = acuity?.weekRevenue ?? 0;
+  const weekSessions = acuity?.weekSessions ?? 0;
+  const weekStripeFees =
+    Math.round((weekGross * 0.029 + weekSessions * 0.3) * 100) / 100;
+  const weekNet = Math.round((weekGross - weekStripeFees) * 100) / 100;
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -221,7 +224,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Monthly Revenue - Top of Dashboard */}
+      {/* Monthly Revenue — Top of Dashboard */}
       <MonthlyRevenue
         acuityData={acuity}
         stripeData={stripe}
@@ -232,22 +235,18 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <MetricCard
           label="Month Revenue"
-          value={stripe?.monthRevenue}
+          value={acuity?.monthEarnedRevenue ?? stripe?.monthRevenue}
           target={9000}
           format="currency"
           subtitle={stripe?.monthNetRevenue > 0 ? `Net: $${Math.round(stripe.monthNetRevenue).toLocaleString()}` : null}
-          loading={loading && !stripe}
+          loading={loading && !acuity && !stripe}
         />
         <MetricCard
           label="Year Revenue"
           value={yearGross}
           target={108000}
           format="currency"
-          subtitle={
-            yearNet > 0
-              ? `Net: $${Math.round(yearNet).toLocaleString()}`
-              : null
-          }
+          subtitle={yearNet > 0 ? `Net: $${Math.round(yearNet).toLocaleString()}` : null}
           loading={loading && !stripe}
         />
         <MetricCard
@@ -272,12 +271,13 @@ export default function Dashboard() {
           <div className="flex items-end gap-2 mb-2">
             <span className="text-3xl font-bold text-brand-400">
               {Math.ceil(
-                (new Date("2026-07-01") - new Date()) / (1000 * 60 * 60 * 24)
+                (new Date("2026-07-01") - new Date()) /
+                  (1000 * 60 * 60 * 24)
               )}
             </span>
             <span className="text-dark-400 text-sm mb-1">days</span>
           </div>
-          <p className="text-xs text-dark-500">July 1, 2026 &middot; +$2,600/mo</p>
+          <p className="text-xs text-dark-500">July 1, 2026 · +$2,600/mo</p>
         </div>
       </div>
 
@@ -285,7 +285,7 @@ export default function Dashboard() {
       <div className="mb-6">
         <WeeklyRevenueGoal
           weekRevenue={weekGross}
-          weekSessions={stripe?.weekChargeCount ?? 0}
+          weekSessions={weekSessions}
           weekNetRevenue={weekNet}
           weekStripeFees={weekStripeFees}
         />
@@ -318,79 +318,48 @@ export default function Dashboard() {
             sessions={acuity?.upcoming}
             loading={loading && !acuity}
           />
-          {quickbooks?.connected && (() => {
-            const stripeGross = yearGross;
-            const qbIncome = quickbooks.totalIncome || 0;
-            const inTransit = Math.round((stripeGross - qbIncome) * 100) / 100;
-            return (
-              <div className="card">
-                <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-4">
-                  QuickBooks P&L &middot; {quickbooks.period}
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-xs text-dark-400">Income</p>
-                    <p className="text-lg font-bold text-green-400">
-                      ${qbIncome.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-dark-400">Expenses</p>
-                    <p className="text-lg font-bold text-red-400">
-                      ${quickbooks.totalExpenses.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-dark-400">Net Income</p>
-                    <p
-                      className={`text-lg font-bold ${
-                        quickbooks.netIncome >= 0
-                          ? "text-green-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      ${quickbooks.netIncome.toLocaleString()}
-                    </p>
-                  </div>
+          {quickbooks?.connected && (
+            <div className="card">
+              <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-4">
+                QuickBooks P&L — {quickbooks.period}
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-dark-400">Income</p>
+                  <p className="text-lg font-bold text-green-400">
+                    ${quickbooks.totalIncome.toLocaleString()}
+                  </p>
                 </div>
-                {inTransit > 0 && (
-                  <div className="mt-4 pt-3 border-t border-dark-700">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-dark-300 uppercase tracking-wide">Stripe vs QuickBooks</span>
-                      <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded">
-                        ${Math.round(inTransit).toLocaleString()} unreconciled
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 mb-2">
-                      <div>
-                        <p className="text-xs text-dark-500">Stripe Collected</p>
-                        <p className="text-sm font-semibold text-white">${stripeGross.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-dark-500">QB Recorded</p>
-                        <p className="text-sm font-semibold text-white">${qbIncome.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-dark-500">In Transit</p>
-                        <p className="text-sm font-semibold text-yellow-400">${Math.round(inTransit).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <p className="text-xs text-dark-500">
-                      Stripe payouts take 2-3 days to reach your bank. QB records income when the deposit hits. This gap is normal.
-                    </p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-xs text-dark-400">Expenses</p>
+                  <p className="text-lg font-bold text-red-400">
+                    ${quickbooks.totalExpenses.toLocaleString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-dark-400">Net Income</p>
+                  <p
+                    className={`text-lg font-bold ${
+                      quickbooks.netIncome >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
+                    ${quickbooks.netIncome.toLocaleString()}
+                  </p>
+                </div>
               </div>
-            );
-          })()}
+            </div>
+          )}
         </div>
+
         <div className="space-y-6">
           <PhaseTracker />
           <WingateCountdown />
           {instagram?.connected && (
             <div className="card">
               <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-3">
-                Instagram &middot; @{instagram.username}
+                Instagram — @{instagram.username}
               </h3>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
@@ -418,7 +387,7 @@ export default function Dashboard() {
                         {post.caption || "No caption"}
                       </p>
                       <p className="text-dark-500 mt-1">
-                        {post.likes} likes &middot; {post.comments} comments
+                        {post.likes} likes · {post.comments} comments
                       </p>
                     </div>
                   ))}
