@@ -25,6 +25,7 @@ function getPriceForAppointment(appt) {
   // FALLBACK: If Acuity has no price field, use type-based lookup
   if (!appt.type) return 130;
   const type = appt.type.toLowerCase();
+
   if (
     type.includes("free") ||
     type.includes("complimentary") ||
@@ -38,6 +39,11 @@ function getPriceForAppointment(appt) {
   return 130;
 }
 
+// Returns true for paid sessions only (excludes free evals from counts)
+function isPaidSession(appt) {
+  return getPriceForAppointment(appt) > 0;
+}
+
 async function acuityGet(endpoint) {
   const credentials = Buffer.from(
     `${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`
@@ -47,6 +53,7 @@ async function acuityGet(endpoint) {
     headers: { Authorization: `Basic ${credentials}` },
     cache: "no-store",
   });
+
   if (!res.ok) throw new Error(`Acuity API error: ${res.status}`);
   return res.json();
 }
@@ -63,9 +70,11 @@ export async function GET() {
     const now = new Date();
     const day = now.getDay();
     const mondayOffset = day === 0 ? -6 : 1 - day;
+
     const monday = new Date(now);
     monday.setDate(now.getDate() + mondayOffset);
     monday.setHours(0, 0, 0, 0);
+
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     sunday.setHours(23, 59, 59, 999);
@@ -102,22 +111,25 @@ export async function GET() {
       ]);
 
     const activeWeekAppts = weekAppts.filter((a) => !a.canceled);
-    const weekSessions = activeWeekAppts.length;
+    // FIX: Only count paid sessions (excludes free evals)
+    const weekSessions = activeWeekAppts.filter(isPaidSession).length;
+    const weekEvals = activeWeekAppts.length - weekSessions;
     const weekRevenue = activeWeekAppts.reduce(
       (sum, appt) => sum + getPriceForAppointment(appt),
       0
     );
 
     const activeLastWeekAppts = lastWeekAppts.filter((a) => !a.canceled);
-    const lastWeekSessions = activeLastWeekAppts.length;
+    // FIX: Only count paid sessions
+    const lastWeekSessions = activeLastWeekAppts.filter(isPaidSession).length;
     const lastWeekRevenue = activeLastWeekAppts.reduce(
       (sum, appt) => sum + getPriceForAppointment(appt),
       0
     );
 
     const monthScheduledAppts = monthAppts.filter((a) => !a.canceled);
-    const nowMs = now.getTime();
 
+    const nowMs = now.getTime();
     const completedAppts = monthScheduledAppts.filter(
       (a) => new Date(a.datetime).getTime() < nowMs
     );
@@ -129,10 +141,12 @@ export async function GET() {
       (sum, appt) => sum + getPriceForAppointment(appt),
       0
     );
+
     const monthRemainingRevenue = scheduledAppts.reduce(
       (sum, appt) => sum + getPriceForAppointment(appt),
       0
     );
+
     const monthProjectedRevenue = monthEarnedRevenue + monthRemainingRevenue;
 
     const monthSessionDetails = monthScheduledAppts.map((a) => ({
@@ -164,6 +178,7 @@ export async function GET() {
       const name = `${appt.firstName} ${appt.lastName}`;
       const price = getPriceForAppointment(appt);
       const isCompleted = new Date(appt.datetime).getTime() < nowMs;
+      const isPaid = price > 0;
 
       if (!clientRevenueMap[name]) {
         clientRevenueMap[name] = {
@@ -173,23 +188,36 @@ export async function GET() {
           scheduledRevenue: 0,
           completed: 0,
           scheduled: 0,
+          evals: 0,
         };
       }
-      clientRevenueMap[name].sessions += 1;
-      clientRevenueMap[name].revenue += price;
 
-      if (isCompleted) {
-        clientRevenueMap[name].completed += 1;
-        clientRevenueMap[name].completedRevenue += price;
+      // FIX: Only count paid sessions in the sessions/completed/scheduled counts
+      if (isPaid) {
+        clientRevenueMap[name].sessions += 1;
+        clientRevenueMap[name].revenue += price;
+        if (isCompleted) {
+          clientRevenueMap[name].completed += 1;
+          clientRevenueMap[name].completedRevenue += price;
+        } else {
+          clientRevenueMap[name].scheduled += 1;
+          clientRevenueMap[name].scheduledRevenue += price;
+        }
       } else {
-        clientRevenueMap[name].scheduled += 1;
-        clientRevenueMap[name].scheduledRevenue += price;
+        clientRevenueMap[name].evals += 1;
       }
     }
+
+    // FIX: All session counts exclude free evals; eval counts tracked separately
+    const paidMonthTotal = monthScheduledAppts.filter(isPaidSession).length;
+    const paidCompletedCount = completedAppts.filter(isPaidSession).length;
+    const paidScheduledCount = scheduledAppts.filter(isPaidSession).length;
+    const monthEvalCount = monthScheduledAppts.length - paidMonthTotal;
 
     return NextResponse.json({
       connected: true,
       weekSessions,
+      weekEvals,
       weekRevenue,
       lastWeekSessions,
       lastWeekRevenue,
@@ -198,9 +226,10 @@ export async function GET() {
       monthProjectedRevenue,
       monthEarnedRevenue,
       monthRemainingRevenue,
-      monthSessionCount: monthScheduledAppts.length,
-      monthCompletedCount: completedAppts.length,
-      monthScheduledCount: scheduledAppts.length,
+      monthSessionCount: paidMonthTotal,
+      monthCompletedCount: paidCompletedCount,
+      monthScheduledCount: paidScheduledCount,
+      monthEvalCount,
       clientRevenueBreakdown: clientRevenueMap,
       monthSessionDetails,
     });
