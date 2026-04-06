@@ -2,20 +2,37 @@ import { NextResponse } from "next/server";
 
 const ACUITY_BASE = "https://acuityscheduling.com/api/v1";
 
-// Same PRICE_MAP as main acuity route
+// Fallback PRICE_MAP — only used when Acuity doesn't have a price on the appointment
+// ORDER MATTERS — more specific keys must come before generic ones
 const PRICE_MAP = {
   "Back to Back Private Session": 205,
+  "Group Session": 205,
   "Group Training": 205,
   "Student Athlete Session": 105,
+  "Senior Fitness (60 min)": 130,
+  "Senior 60 Minute": 130,
   "Senior 60min": 130,
+  "Senior Fitness (30 min)": 70,
+  "Senior 30 Minute": 70,
   "Senior 30min": 70,
   "Private Session": 130,
 };
 
 function getPriceForAppointment(appt) {
+  // PRIMARY: Use the actual price from Acuity (what was actually charged)
+  // Acuity stores price as a string like "130.00" or "0.00"
+  if (appt.price !== undefined && appt.price !== null && appt.price !== "") {
+    const actualPrice = parseFloat(appt.price);
+    if (!isNaN(actualPrice)) {
+      return actualPrice;
+    }
+  }
+
+  // FALLBACK: If Acuity has no price field, use type-based lookup
   if (!appt.type) return 130;
   const type = appt.type.toLowerCase();
 
+  // Free evaluations and complimentary sessions = $0
   if (
     type.includes("free") ||
     type.includes("complimentary") ||
@@ -120,3 +137,8 @@ export async function GET() {
     );
   }
 }
+
+  
+
+    
+      
