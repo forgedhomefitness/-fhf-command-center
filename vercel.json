@@ -5,8 +5,8 @@
       "schedule": "45 9 * * 6"
     },
     {
-      "path": "/api/quickbooks/keepalive",
-      "schedule": "0 10 * * *"
+      "path": "/api/cron/daily",
+      "schedule": "30 10 * * *"
     }
   ]
 }
