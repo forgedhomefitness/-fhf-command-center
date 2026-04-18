@@ -9,91 +9,109 @@ import UpcomingSessions from "@/components/UpcomingSessions";
 import WeeklyRevenueGoal from "@/components/WeeklyRevenueGoal";
 import MonthlyRevenue from "@/components/MonthlyRevenue";
 import WebsiteVisits from "@/components/WebsiteVisits";
-import { timeAgo } from "@/lib/utils";
+import { timeAgo, getCurrentPhaseIndex } from "@/lib/utils";
+import { PHASES, WINGATE, calculateStripeFees } from "@/lib/constants";
 
 const REFRESH_INTERVAL = 30 * 60 * 1000;
 
-function WingateCountdown() {
-  const target = new Date("2026-07-01");
+function WingateTracker() {
   const now = new Date();
-  const daysLeft = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
-  const totalDays = Math.ceil(
-    (target - new Date("2026-03-01")) / (1000 * 60 * 60 * 24)
-  );
-  const pct = Math.max(
-    0,
-    Math.min(100, Math.round(((totalDays - daysLeft) / totalDays) * 100))
-  );
 
-  const checklist = [
-    { text: "Finalize contract terms", done: false },
-    { text: "Additional Insured endorsement", done: false },
-    { text: "Group fitness curriculum planned", done: false },
-    { text: "Equipment list confirmed", done: false },
-    { text: "Launch date locked", done: false },
+  // Wingate Needham — confirmed, starts May 6
+  const needhamStart = new Date("2026-05-06");
+  const needhamDays = Math.ceil((needhamStart - now) / (1000 * 60 * 60 * 24));
+  const needhamLaunched = needhamDays <= 0;
+
+  // Wingate Way East — opens July 1
+  const wayEastOpen = new Date("2026-07-01");
+  const wayEastDays = Math.ceil((wayEastOpen - now) / (1000 * 60 * 60 * 24));
+  const wayEastLaunched = wayEastDays <= 0;
+  const totalDays = Math.ceil((wayEastOpen - new Date("2025-11-13")) / (1000 * 60 * 60 * 24));
+  const pct = Math.max(0, Math.min(100, Math.round(((totalDays - wayEastDays) / totalDays) * 100)));
+
+  const needhamChecklist = [
+    { text: "Contract confirmed with Hannah Alstein", done: true },
+    { text: "Aqua class format designed (45 min)", done: true },
+    { text: "ALA Lifeguard certification", done: false },
+    { text: "May 4 — Resident community meeting intro", done: false },
+    { text: "May 6 — First aqua class", done: false },
   ];
+
+  const wayEastChecklist = [
+    { text: "In-person meeting with Megan (April 13)", done: true },
+    { text: "Verbal alignment on exclusivity", done: true },
+    { text: "Formal contract signed", done: false },
+    { text: "Additional Insured endorsement", done: false },
+    { text: "July 1 — Facility opens", done: false },
+  ];
+
+  const CheckItem = ({ item }) => (
+    <div className="flex items-center gap-2 text-xs">
+      <div
+        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+          item.done ? "bg-brand-500 border-brand-500" : "border-dark-500"
+        }`}
+      >
+        {item.done && (
+          <svg className="w-2.5 h-2.5 text-dark-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </div>
+      <span className={item.done ? "text-dark-500 line-through" : "text-dark-300"}>
+        {item.text}
+      </span>
+    </div>
+  );
 
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide">
-          Wingate Way East
+          Wingate Pipeline
         </h3>
         <span className="text-xs font-medium text-brand-400 bg-brand-500/10 px-2 py-1 rounded">
-          {daysLeft > 0 ? `${daysLeft} days to launch` : "LAUNCHED"}
+          +$2,975/mo potential
         </span>
       </div>
-      <p className="text-xs text-dark-400 mb-3">
-        July 1, 2026 · ~$2,600/mo guaranteed
-      </p>
-      <div className="w-full bg-dark-700 rounded-full h-2 mb-4">
-        <div
-          className="bg-brand-500 h-2 rounded-full transition-all"
-          style={{ width: `${pct}%` }}
-        />
+
+      {/* Wingate Needham */}
+      <div className="mb-4 pb-3 border-b border-dark-700">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-white">Wingate Needham</p>
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${needhamLaunched ? "text-green-400 bg-green-500/10" : "text-brand-400 bg-brand-500/10"}`}>
+            {needhamLaunched ? "ACTIVE" : `${needhamDays} days`}
+          </span>
+        </div>
+        <p className="text-[10px] text-dark-400 mb-2">Wed 10am aqua · $75/class · Hannah Alstein</p>
+        <div className="space-y-1.5">
+          {needhamChecklist.map((item, i) => <CheckItem key={i} item={item} />)}
+        </div>
       </div>
-      <div className="space-y-2">
-        {checklist.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 text-xs">
-            <div
-              className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                item.done
-                  ? "bg-brand-500 border-brand-500"
-                  : "border-dark-500"
-              }`}
-            >
-              {item.done && (
-                <svg
-                  className="w-2.5 h-2.5 text-dark-950"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              )}
-            </div>
-            <span
-              className={
-                item.done ? "text-dark-500 line-through" : "text-dark-300"
-              }
-            >
-              {item.text}
-            </span>
-          </div>
-        ))}
+
+      {/* Wingate Way East */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold text-white">Wingate Way East</p>
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${wayEastLaunched ? "text-green-400 bg-green-500/10" : "text-yellow-400 bg-yellow-500/10"}`}>
+            {wayEastLaunched ? "ACTIVE" : `${wayEastDays} days`}
+          </span>
+        </div>
+        <p className="text-[10px] text-dark-400 mb-2">5 days/wk · $2,600/mo · Megan Ferrara</p>
+        <div className="w-full bg-dark-700 rounded-full h-1.5 mb-2">
+          <div className="bg-brand-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="space-y-1.5">
+          {wayEastChecklist.map((item, i) => <CheckItem key={i} item={item} />)}
+        </div>
       </div>
     </div>
   );
 }
 
 function SessionPaceTracker({ weekSessions, lastWeekSessions }) {
-  const target = 18;
+  const phase = PHASES[getCurrentPhaseIndex()];
+  const target = phase.sessionsPerWeek;
   const current = weekSessions ?? 0;
   const last = lastWeekSessions ?? 0;
   const trend = current - last;
@@ -142,7 +160,7 @@ function SessionPaceTracker({ weekSessions, lastWeekSessions }) {
         />
       </div>
       <p className="text-xs text-dark-500 mt-2">
-        Target: 18-20 sessions/week for Phase 1 ($108K)
+        Phase {phase.phase} target: {target} sessions/week (${phase.annualTarget.toLocaleString()}/yr)
       </p>
     </div>
   );
@@ -183,15 +201,16 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
+  const phase = PHASES[getCurrentPhaseIndex()];
+
   // Calculate net revenue for Year Revenue card
   const yearGross = stripe?.yearRevenue || 0;
   const yearNet = stripe?.yearNetRevenue || 0;
 
-  // Calculate net for weekly revenue
+  // Calculate net for weekly revenue using centralized fee calculator
   const weekGross = acuity?.weekRevenue ?? 0;
   const weekSessions = acuity?.weekSessions ?? 0;
-  const weekStripeFees =
-    Math.round((weekGross * 0.029 + weekSessions * 0.3) * 100) / 100;
+  const weekStripeFees = calculateStripeFees(weekGross, weekSessions);
   const weekNet = Math.round((weekGross - weekStripeFees) * 100) / 100;
 
   return (
@@ -236,7 +255,7 @@ export default function Dashboard() {
         <MetricCard
           label="Month Revenue"
           value={acuity?.monthEarnedRevenue ?? stripe?.monthRevenue}
-          target={9000}
+          target={phase.monthlyTarget}
           format="currency"
           subtitle={stripe?.monthNetRevenue > 0 ? `Net: $${Math.round(stripe.monthNetRevenue).toLocaleString()}` : null}
           loading={loading && !acuity && !stripe}
@@ -244,7 +263,7 @@ export default function Dashboard() {
         <MetricCard
           label="Year Revenue"
           value={yearGross}
-          target={108000}
+          target={phase.annualTarget}
           format="currency"
           subtitle={yearNet > 0 ? `Net: $${Math.round(yearNet).toLocaleString()}` : null}
           loading={loading && !stripe}
@@ -252,7 +271,7 @@ export default function Dashboard() {
         <MetricCard
           label="Sessions This Week"
           value={acuity?.weekSessions}
-          target={18}
+          target={phase.sessionsPerWeek}
           format="number"
           loading={loading && !acuity}
         />
@@ -266,18 +285,29 @@ export default function Dashboard() {
         <WebsiteVisits analytics={analytics} loading={loading && !analytics} />
         <div className="card">
           <p className="text-xs font-semibold text-dark-300 uppercase tracking-wide mb-2">
-            Wingate Launch
+            Next Wingate Launch
           </p>
-          <div className="flex items-end gap-2 mb-2">
-            <span className="text-3xl font-bold text-brand-400">
-              {Math.ceil(
-                (new Date("2026-07-01") - new Date()) /
-                  (1000 * 60 * 60 * 24)
-              )}
-            </span>
-            <span className="text-dark-400 text-sm mb-1">days</span>
-          </div>
-          <p className="text-xs text-dark-500">July 1, 2026 · +$2,600/mo</p>
+          {(() => {
+            const needhamStart = new Date("2026-05-06");
+            const wayEastOpen = new Date("2026-07-01");
+            const now = new Date();
+            const needhamDays = Math.ceil((needhamStart - now) / (1000 * 60 * 60 * 24));
+            const wayEastDays = Math.ceil((wayEastOpen - now) / (1000 * 60 * 60 * 24));
+            const nextDate = needhamDays > 0 ? needhamDays : wayEastDays;
+            const nextName = needhamDays > 0 ? "Needham" : "Way East";
+            const nextRevenue = needhamDays > 0 ? "$75/wk" : "$2,600/mo";
+            return (
+              <>
+                <div className="flex items-end gap-2 mb-2">
+                  <span className="text-3xl font-bold text-brand-400">
+                    {nextDate > 0 ? nextDate : 0}
+                  </span>
+                  <span className="text-dark-400 text-sm mb-1">days</span>
+                </div>
+                <p className="text-xs text-dark-500">{nextName} · {nextRevenue}</p>
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -355,7 +385,7 @@ export default function Dashboard() {
 
         <div className="space-y-6">
           <PhaseTracker />
-          <WingateCountdown />
+          <WingateTracker />
           {instagram?.connected && (
             <div className="card">
               <h3 className="text-sm font-semibold text-dark-300 uppercase tracking-wide mb-3">

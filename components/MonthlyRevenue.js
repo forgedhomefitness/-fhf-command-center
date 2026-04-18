@@ -1,21 +1,7 @@
 "use client";
 
-const PHASES = [
-  { name: "Phase 1", year: "2026", annual: 108000 },
-  { name: "Phase 2", year: "2027", annual: 192000 },
-  { name: "Phase 3", year: "2028", annual: 288000 },
-  { name: "Phase 4", year: "2029+", annual: 500000 },
-  { name: "Phase 5", year: "2030", annual: 1000000 },
-];
-
-function getCurrentPhase() {
-  const year = new Date().getFullYear();
-  if (year <= 2026) return 0;
-  if (year === 2027) return 1;
-  if (year === 2028) return 2;
-  if (year === 2029) return 3;
-  return 4;
-}
+import { PHASES, calculateStripeFees } from "@/lib/constants";
+import { getCurrentPhaseIndex } from "@/lib/utils";
 
 function MonthlyCard({ label, amount, target, color, subtitle, netAmount }) {
   const pct = target > 0 ? Math.min(100, Math.round((amount / target) * 100)) : 0;
@@ -90,14 +76,17 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
     );
   }
 
-  const phase = PHASES[getCurrentPhase()];
-  const monthTarget = Math.round(phase.annual / 12);
+  const phase = PHASES[getCurrentPhaseIndex()];
+  const monthTarget = phase.monthlyTarget;
 
   const monthEarned = acuityData?.monthEarnedRevenue ?? stripeData?.monthRevenue ?? 0;
   const monthProjected = acuityData?.monthProjectedRevenue ?? monthEarned;
   const completedCount = acuityData?.monthCompletedCount ?? stripeData?.monthChargeCount ?? 0;
   const scheduledCount = acuityData?.monthScheduledCount ?? 0;
   const monthNetRevenue = stripeData?.monthNetRevenue ?? null;
+
+  const projectedFees = calculateStripeFees(monthProjected, completedCount + scheduledCount);
+  const projectedNet = monthProjected > 0 ? Math.round((monthProjected - projectedFees) * 100) / 100 : null;
 
   const now = new Date();
   const monthName = now.toLocaleString("en-US", { month: "long" });
@@ -112,7 +101,7 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           {monthName} Revenue
         </h2>
         <span className="text-xs text-dark-500">
-          Day {dayOfMonth} of {daysInMonth} -{daysLeft} days left
+          Day {dayOfMonth} of {daysInMonth} · {daysLeft} days left
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -130,14 +119,14 @@ export default function MonthlyRevenue({ acuityData, stripeData, loading }) {
           target={monthTarget}
           color="border-brand-500/30 bg-brand-500/5"
           subtitle={`${completedCount} completed + ${scheduledCount} scheduled`}
-          netAmount={monthProjected > 0 ? Math.round((monthProjected - (monthProjected * 0.029 + (completedCount + scheduledCount) * 0.3)) * 100) / 100 : null}
+          netAmount={projectedNet}
         />
         <MonthlyCard
           label="Monthly Target"
           amount={monthTarget}
           target={monthTarget}
           color="border-dark-600 bg-dark-800/40"
-          subtitle={`${phase.name} -$${phase.annual.toLocaleString()}/yr`}
+          subtitle={`Phase ${phase.phase} — $${phase.annualTarget.toLocaleString()}/yr`}
         />
       </div>
     </div>

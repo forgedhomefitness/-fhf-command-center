@@ -1,19 +1,7 @@
 "use client";
 
-const PHASES = [
-  { name: "Phase 1", year: "2026", annual: 108000, weekly: 2077 },
-  { name: "Phase 2", year: "2027", annual: 192000, weekly: 3692 },
-  { name: "Phase 3", year: "2028", annual: 288000, weekly: 5538 },
-  { name: "Phase 4", year: "2029+", annual: 500000, weekly: 9615 },
-];
-
-function getCurrentPhase() {
-  const year = new Date().getFullYear();
-  if (year <= 2026) return 0;
-  if (year === 2027) return 1;
-  if (year === 2028) return 2;
-  return 3;
-}
+import { PHASES } from "@/lib/constants";
+import { getCurrentPhaseIndex } from "@/lib/utils";
 
 export default function WeeklyRevenueGoal({
   weekRevenue = 0,
@@ -21,9 +9,9 @@ export default function WeeklyRevenueGoal({
   weekNetRevenue = 0,
   weekStripeFees = 0,
 }) {
-  const phaseIndex = getCurrentPhase();
+  const phaseIndex = getCurrentPhaseIndex();
   const phase = PHASES[phaseIndex];
-  const target = phase.weekly;
+  const target = phase.weeklyTarget;
   const pct = Math.min(100, Math.round((weekRevenue / target) * 100));
   const remaining = Math.max(0, target - weekRevenue);
   const avgPerSession =
@@ -96,7 +84,7 @@ export default function WeeklyRevenueGoal({
       )}
 
       <p className="text-xs text-dark-500 mb-3">
-        {phase.name} ({phase.year}) \u00b7 ${phase.annual.toLocaleString()}/yr
+        Phase {phase.phase} — {phase.label} ({phase.year}) · ${phase.annualTarget.toLocaleString()}/yr
       </p>
 
       {/* Progress bar */}
@@ -129,7 +117,7 @@ export default function WeeklyRevenueGoal({
             {remaining > 0 ? sessionsNeeded : "\u2713"}
           </p>
           <p className="text-[10px] text-dark-400 uppercase">
-            {remaining > 0 ? "Still Need to Hit Goal" : "Goal Hit!"}
+            {remaining > 0 ? "Still Need" : "Goal Hit!"}
           </p>
         </div>
       </div>
@@ -144,7 +132,7 @@ export default function WeeklyRevenueGoal({
           {sessionsNeeded > 0 && (
             <span>
               {" "}
-              \u00b7 ~{sessionsNeeded} more session
+              · ~{sessionsNeeded} more session
               {sessionsNeeded > 1 ? "s" : ""} at ${avgPerSession}/avg
             </span>
           )}
@@ -176,7 +164,7 @@ export default function WeeklyRevenueGoal({
               }`}
             >
               <div className="font-semibold">
-                ${p.weekly.toLocaleString()}
+                ${p.weeklyTarget.toLocaleString()}
               </div>
               <div className="opacity-70">{p.year}</div>
             </div>
