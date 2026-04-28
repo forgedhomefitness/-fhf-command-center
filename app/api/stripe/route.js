@@ -1,16 +1,34 @@
 import { NextResponse } from "next/server";
 
+// Live Stripe fetch â no Redis cache dependency
+// Replaces the cached version that went stale 2026-04-18
+
 const STRIPE_BASE = "https://api.stripe.com/v1";
 
 async function stripeGet(endpoint) {
   const res = await fetch(`${STRIPE_BASE}${endpoint}`, {
     headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+    cache: "no-store",
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || `Stripe API error: ${res.status}`);
   }
   return res.json();
+}
+
+function getWeekBounds() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 6 : day - 1; // Monday = start of week
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - diff);
+  weekStart.setHours(0, 0, 0, 0);
+  return {
+    weekStartTs: Math.floor(weekStart.getTime() / 1000),
+    lastWeekStartTs: Math.floor((weekStart.getTime() - 7 * 86400000) / 1000),
+    lastWeekEndTs: Math.floor(weekStart.getTime() / 1000),
+  };
 }
 
 export async function GET() {
@@ -29,19 +47,15 @@ export async function GET() {
     const yearStart = Math.floor(
       new Date(now.getFullYear(), 0, 1).getTime() / 1000
     );
+    const { weekStartTs, lastWeekStartTs, lastWeekEndTs } = getWeekBounds();
 
-    // Week start = Monday 00:00:00
-    const weekStartDate = new Date(now);
-    const day = weekStartDate.getDay(); // 0=Sun, 1=Mon
-    const diff = day === 0 ? 6 : day - 1;
-    weekStartDate.setDate(weekStartDate.getDate() - diff);
-    weekStartDate.setHours(0, 0, 0, 0);
-    const weekStart = Math.floor(weekStartDate.getTime() / 1000);
-
-    // Fetch week, month, year charges, and customers in parallel
-    const [weekCharges, monthCharges, yearCharges, customers] =
+    // Fetch all data in parallel â week, last week, month, year, customers
+    const [weekCharges, lastWeekCharges, monthCharges, yearCharges, customers] =
       await Promise.all([
-        stripeGet(`/charges?created[gte]=${weekStart}&limit=100`),
+        stripeGet(`/charges?created[gte]=${weekStartTs}&limit=100`),
+        stripeGet(
+          `/charges?created[gte]=${lastWeekStartTs}&created[lt]=${lastWeekEndTs}&limit=100`
+        ),
         stripeGet(`/charges?created[gte]=${monthStart}&limit=100`),
         stripeGet(`/charges?created[gte]=${yearStart}&limit=100`),
         stripeGet(`/customers?limit=100`),
@@ -55,63 +69,32 @@ export async function GET() {
     const countSucceeded = (charges) =>
       charges.data.filter((c) => c.status === "succeeded").length;
 
-    // Weekly
+    const calcFees = (revenue, count) =>
+      Math.round((revenue * 0.029 + count * 0.3) * 100) / 100;
+
+    // Week
     const weekRevenue = sumSucceeded(weekCharges);
     const weekChargeCount = countSucceeded(weekCharges);
-    const weekStripeFees =
-      Math.round((weekRevenue * 0.029 + weekChargeCount * 0.3) * 100) / 100;
-    const weekNetRevenue =
-      Math.round((weekRevenue - weekStripeFees) * 100) / 100;
+    const weekStripeFees = calcFees(weekRevenue, weekChargeCount);
+    const weekNetRevenue = Math.round((weekRevenue - weekStripeFees) * 100) / 100;
 
-    // Monthly
+    // Last week
+    const lastWeekRevenue = sumSucceeded(lastWeekCharges);
+    const lastWeekSessions = countSucceeded(lastWeekCharges);
+
+    // Month
     const monthRevenue = sumSucceeded(monthCharges);
     const monthChargeCount = countSucceeded(monthCharges);
-    const monthStripeFees =
-      Math.round((monthRevenue * 0.029 + monthChargeCount * 0.3) * 100) / 100;
-    const monthNetRevenue =
-      Math.round((monthRevenue - monthStripeFees) * 100) / 100;
+    const monthStripeFees = calcFees(monthRevenue, monthChargeCount);
+    const monthNetRevenue = Math.round((monthRevenue - monthStripeFees) * 100) / 100;
 
-    // Yearly
+    // Year
     const yearRevenue = sumSucceeded(yearCharges);
     const yearChargeCount = countSucceeded(yearCharges);
-    const yearStripeFees =
-      Math.round((yearRevenue * 0.029 + yearChargeCount * 0.3) * 100) / 100;
-    const yearNetRevenue =
-      Math.round((yearRevenue - yearStripeFees) * 100) / 100;
+    const yearStripeFees = calcFees(yearRevenue, yearChargeCount);
+    const yearNetRevenue = Math.round((yearRevenue - yearStripeFees) * 100) / 100;
 
-    // Monthly breakdown from year charges
-    const monthLabels = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
-    const monthBuckets = {};
-    for (const c of yearCharges.data) {
-      if (c.status !== "succeeded") continue;
-      const d = new Date(c.created * 1000);
-      const m = d.getMonth();
-      const key = `${d.getFullYear()}-${String(m + 1).padStart(2, "0")}`;
-      if (!monthBuckets[key]) {
-        monthBuckets[key] = {
-          key,
-          label: `${monthLabels[m]} ${d.getFullYear()}`,
-          revenue: 0,
-          chargeCount: 0,
-        };
-      }
-      monthBuckets[key].revenue += c.amount / 100;
-      monthBuckets[key].chargeCount += 1;
-    }
-
-    // Sort by key and calculate fees/net for each month
-    const months = Object.values(monthBuckets)
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((m) => {
-        const fees =
-          Math.round((m.revenue * 0.029 + m.chargeCount * 0.3) * 100) / 100;
-        const net = Math.round((m.revenue - fees) * 100) / 100;
-        return { ...m, stripeFees: fees, netRevenue: net };
-      });
-
+    // Recent charges
     const recentCharges = monthCharges.data
       .filter((c) => c.status === "succeeded")
       .slice(0, 10)
@@ -123,25 +106,62 @@ export async function GET() {
         status: c.status,
       }));
 
-    return NextResponse.json({
-      weekRevenue,
-      weekNetRevenue,
-      weekStripeFees,
-      weekChargeCount,
-      monthRevenue,
-      yearRevenue,
-      monthNetRevenue,
-      yearNetRevenue,
-      monthStripeFees,
-      yearStripeFees,
-      monthChargeCount,
-      yearChargeCount,
-      customerCount: customers.data.length,
-      recentCharges,
-      months,
-      lastFetched: new Date().toISOString(),
-      connected: true,
-    });
+    // Monthly breakdown for year
+    const monthBuckets = {};
+    yearCharges.data
+      .filter((c) => c.status === "succeeded")
+      .forEach((c) => {
+        const d = new Date(c.created * 1000);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (!monthBuckets[key]) monthBuckets[key] = { revenue: 0, count: 0 };
+        monthBuckets[key].revenue += c.amount / 100;
+        monthBuckets[key].count++;
+      });
+
+    const months = Object.entries(monthBuckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, data]) => ({
+        key,
+        label: new Date(key + "-01").toLocaleString("en-US", {
+          month: "short",
+          year: "numeric",
+        }),
+        revenue: data.revenue,
+        chargeCount: data.count,
+        stripeFees: calcFees(data.revenue, data.count),
+        netRevenue:
+          Math.round((data.revenue - calcFees(data.revenue, data.count)) * 100) /
+          100,
+      }));
+
+    return NextResponse.json(
+      {
+        weekRevenue,
+        weekNetRevenue,
+        weekStripeFees,
+        weekChargeCount,
+        lastWeekRevenue,
+        lastWeekSessions,
+        monthRevenue,
+        yearRevenue,
+        monthNetRevenue,
+        yearNetRevenue,
+        monthStripeFees,
+        yearStripeFees,
+        monthChargeCount,
+        yearChargeCount,
+        customerCount: customers.data.length,
+        recentCharges,
+        months,
+        lastFetched: new Date().toISOString(),
+        connected: true,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     console.error("Stripe API error:", error.message);
     return NextResponse.json(
