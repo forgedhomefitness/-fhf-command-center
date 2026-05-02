@@ -1,12 +1,12 @@
 {
-  "crons": [
-    {
-      "path": "/api/quickbooks/keepalive",
-      "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/newsletter?mode=preview&tz=edt",
-      "schedule": "30 10 * * 1"
-    }
-  ]
+    "crons": [
+          {
+                  "path": "/api/reports/weekly",
+                  "schedule": "30 9 * * 6"
+          },
+          {
+                  "path": "/api/newsletter?mode=preview&tz=edt",
+                  "schedule": "30 10 * * 1"
+          }
+    ]
 }
