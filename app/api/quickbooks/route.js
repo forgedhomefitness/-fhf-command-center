@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic"; // disable Vercel static caching - P&L must be live, not frozen at build time
 
 // ── Upstash Redis helpers (REST API, no SDK needed) ──────────────
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
