@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic"; // disable Vercel static caching - route MUST execute every call (token refresh + Redis traffic)
 
 // ââ Upstash Redis helpers ââââââââââââââââââââââââââââââââââââââ
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
