@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = "force-dynamic"; // disable Vercel static caching
 
 // ââ Upstash Redis helpers (shared with main QB route) ââââââââââ
 const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
