@@ -13,7 +13,7 @@ const CLIENT_EMAILS = [
 "jonblotner@gmail.com",
 "belworthy@gmail.com",
 "Paul.Liberman@gmail.com",
-"Rachel.nager@gmail.com",
+"rachel.nager@gmail.com",
 "Alisha.nuger@gmail.com",
 "Jnuger@gmail.com",
 "Rsahamd@gmail.com",
@@ -25,6 +25,15 @@ const CLIENT_EMAILS = [
 "jengold1813@gmail.com",
 "lindajia.lu@gmail.com",
 "zachsadek@gmail.com",
+"dyoung802@rcn.com",
+"j.ginsburg@comcast.net",
+"laurajtabak@gmail.com",
+"ashleymfernandes@gmail.com",
+"David.Perry@hines.com",
+"jvoldins@comcast.net",
+"jrhmiller@gmail.com",
+"miller.haynes@gmail.com",
+"begsaba@gmail.com",
 ];
 
 // 8 PRE-BUILT NEWSLETTER WEEKS
