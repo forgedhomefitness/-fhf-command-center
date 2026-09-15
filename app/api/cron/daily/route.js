@@ -72,28 +72,21 @@ export async function GET(request) {
 
   const results = [];
 
-  // EVERY DAY: QuickBooks token keepalive
+  // EVERY DAY: QuickBooks token keepalive.
+  //
+  // This is the ONLY reason this dispatcher exists now, and it is not
+  // optional. Intuit expires a refresh token that goes ~100 days unused. This
+  // route lost its cron slot on 2026-06-06 when vercel.json was created with
+  // two other crons (Hobby allows two). Exactly 100 days later the QuickBooks
+  // token died with invalid_grant and the dashboard went dark on QBO. If you
+  // take this cron away again, that WILL happen again.
   results.push(await callInternalRoute("/api/quickbooks/keepalive"));
 
-  // MONDAY: Weekly newsletter preview to Matt
-  if (eastern.dayOfWeek === 1) {
-    results.push(await callInternalRoute("/api/newsletter", { mode: "preview" }));
-  }
-
-  // TUESDAY: Weekly newsletter send to all clients
-  if (eastern.dayOfWeek === 2) {
-    results.push(await callInternalRoute("/api/newsletter", { mode: "send" }));
-  }
-
-  // 24th: Monthly newsletter preview
-  if (eastern.day === 24) {
-    results.push(await callInternalRoute("/api/monthly-newsletter", { mode: "preview" }));
-  }
-
-  // 25th: Monthly newsletter send
-  if (eastern.day === 25) {
-    results.push(await callInternalRoute("/api/monthly-newsletter", { mode: "send" }));
-  }
+  // The newsletter dispatches that used to live here were removed 2026-09-15.
+  // The Tuesday one called /api/newsletter?mode=send, which BCCs the route's
+  // hardcoded CLIENT_EMAILS - a list that has drifted out of sync with the
+  // list Matt actually sends to. Matt composes and sends the weekly himself.
+  // Do not re-add an automatic client send here without reconciling that list.
 
   return NextResponse.json({
     success: true,
