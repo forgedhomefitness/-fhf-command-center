@@ -1,0 +1,19 @@
+{
+  "_comment": "SOURCE OF TRUTH for Way East facility billing. A class existing in Acuity or Google Calendar is NOT evidence Matt taught it - 9/1 and 9/2 were on the calendar and the building was shut. Only dates in confirmedTaught are counted or billed. Anything scheduled but not listed here is reported as PENDING and excluded from the money. Maintained by Atlas when Matt confirms.",
+  "ratePerDay": 75,
+  "note": "Way East bills per DAY - the $75 covers Rise and Move + Stability and Strength combined. Never bill $75 twice for one morning.",
+  "programStart": "2026-09-03",
+  "confirmedTaught": [
+    "2026-09-03", "2026-09-04",
+    "2026-09-08", "2026-09-09", "2026-09-10", "2026-09-11",
+    "2026-09-14"
+  ],
+  "confirmedNotTaught": {
+    "2026-09-01": "Building not open - Riley 8/29",
+    "2026-09-02": "Building not open - Riley 8/29"
+  },
+  "closures": [
+    "2026-09-07", "2026-10-12", "2026-11-26", "2026-12-25",
+    "2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31"
+  ]
+}
