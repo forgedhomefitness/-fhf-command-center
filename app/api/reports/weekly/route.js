@@ -57,8 +57,25 @@ function formatCurrency(val) {
 
 // ---- Way East facility -------------------------------------------------
 // $75 per DAY, invoiced by check, invisible to Stripe AND Acuity.
-// Counts ONLY days confirmed taught. A scheduled class is not evidence.
+//
+// RULE CHANGED 2026-09-15 BY MATT: "assume i trained at wingate everyday unless
+// i say other wise." When assumeTaughtWeekdays is true, a past weekday on or
+// after programStart counts as taught unless it is a closure or is listed in
+// confirmedNotTaught. Before this, a day only counted if Matt named it.
+//
+// THE GUARD THAT MATTERS: a date in the FUTURE is never counted. The reporting
+// week runs Mon-Sat, so without this a Tuesday report would bill Wednesday,
+// Thursday and Friday as revenue before Matt had taught them.
 function isoDay(d) { return d.toISOString().slice(0, 10); }
+
+// Today's date in America/New_York as YYYY-MM-DD, built from parts so it is not
+// shifted by the server's UTC clock.
+function todayInET() {
+  const p = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  return p; // en-CA formats as YYYY-MM-DD
+}
 
 function wayEastForWeek(weekStart, weekEnd) {
   const rate = wayEastLog.ratePerDay || 75;
@@ -66,20 +83,24 @@ function wayEastForWeek(weekStart, weekEnd) {
   const notTaught = new Set(Object.keys(wayEastLog.confirmedNotTaught || {}));
   const closures = new Set(wayEastLog.closures || []);
   const start = wayEastLog.programStart || "2026-09-03";
+  const assumeTaught = wayEastLog.assumeTaughtWeekdays === true;
+  const today = todayInET();
 
-  const confirmed = [], pending = [];
+  const confirmed = [], pending = [], upcoming = [];
   for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
     const iso = isoDay(d), dow = d.getUTCDay();
     if (dow === 0 || dow === 6) continue;      // Way East is Mon-Fri
     if (iso < start) continue;
     if (closures.has(iso) || notTaught.has(iso)) continue;
-    if (taught.has(iso)) confirmed.push(iso);
+    if (iso > today) { upcoming.push(iso); continue; }  // not yet worked - never revenue
+    if (taught.has(iso) || assumeTaught) confirmed.push(iso);
     else pending.push(iso);                     // scheduled but UNCONFIRMED
   }
   return {
     rate,
     confirmedDays: confirmed,
     pendingDays: pending,
+    upcomingDays: upcoming,                     // later this week, not yet taught
     confirmedRevenue: confirmed.length * rate,
     pendingRevenue: pending.length * rate,
   };
