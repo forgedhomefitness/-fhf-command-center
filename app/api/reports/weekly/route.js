@@ -98,7 +98,12 @@ function currentWeekMonSat() {
 
 async function fetchInternal(path) {
   try {
-    const res = await fetch(`${BASE_URL}${path}`, { cache: "no-store" });
+    // The data endpoints are no longer public (they expose client names), so
+    // server-to-server reads must present the internal bearer.
+    const headers = process.env.CRON_SECRET
+      ? { Authorization: `Bearer ${process.env.CRON_SECRET}` }
+      : undefined;
+    const res = await fetch(`${BASE_URL}${path}`, { cache: "no-store", headers });
     if (!res.ok) return null;
     return res.json();
   } catch {
