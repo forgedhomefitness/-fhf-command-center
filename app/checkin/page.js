@@ -44,10 +44,10 @@ export default function WeeklyCheckIn() {
     const prompt = `Matt's weekly check-in. Analyze against 5-year plan.
 
 LIVE DATA:
-- Month revenue: $${s?.monthRevenue || 0} / $9,000 target
+- Month revenue: $${s?.monthRevenue || 0} / $16,000 target
 - Year revenue: $${s?.yearRevenue || 0} / $108,000 target
 - Active customers: ${s?.customerCount || 0}
-- Sessions this week: ${a?.weekSessions || 0} / 18 target
+- Sessions this week: ${a?.weekSessions || 0} (the target that matters is $3,810/wk of booked revenue, not a session count)
 - Instagram followers: ${ig?.followers || 0} / 300 target
 
 MATT'S NOTES:
