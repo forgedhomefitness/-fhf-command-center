@@ -109,9 +109,16 @@ async function fetchInternal(path) {
 function buildEmailHTML(acuityData, qbData, weeklyData, stripeData) {
   const grossRevenue = acuityData?.totalRevenue || 0;
   const totalSessions = acuityData?.totalSessions || 0;
+  // QuickBooks: distinguish "connected and zero" from "not connected at all".
+  // A dead OAuth token used to render as $0.00 income, which reads as a
+  // catastrophe rather than a broken connection.
+  const qbConnected = !!qbData && qbData.connected !== false && qbData.totalIncome != null;
   const qbIncome = qbData?.totalIncome || 0;
   const qbExpenses = qbData?.totalExpenses || 0;
   const netIncome = qbData?.netIncome || 0;
+  const qbCell = (val, color) => qbConnected
+    ? `<td style="padding:8px 0;color:${color};font-size:18px;font-weight:bold;text-align:right;">${formatCurrency(val)}</td>`
+    : `<td style="padding:8px 0;color:#fbbf24;font-size:13px;font-weight:bold;text-align:right;">not connected</td>`;
 
   // MONEY ACTUALLY COLLECTED comes from Stripe, which reports real fees to the
   // cent. Acuity is kept only as a cross-check - the two diverge (Acuity counts
@@ -124,8 +131,12 @@ function buildEmailHTML(acuityData, qbData, weeklyData, stripeData) {
 
   const acuityRevenue = weeklyData?.weekRevenue || 0;
   const thisWeekSessions = weeklyData?.weekSessions || 0;
-  const lastWeekRevenue = weeklyData?.lastWeekRevenue || 0;
-  const lastWeekSessions = weeklyData?.lastWeekSessions || 0;
+  // LAST WEEK MUST BE THE SAME BASIS AS THIS WEEK or the comparison lies.
+  // It used to come from Acuity (booked appointments, no facility, modelled
+  // fees) while this week came from Stripe + facility - so last week was
+  // understated by every facility day and the WoW change was flattered.
+  const lastWeekRevenue = stripeData?.lastWeekRevenue ?? 0;
+  const lastWeekSessions = stripeData?.lastWeekSessions ?? 0;
 
   // CROSS-CHECK: Acuity vs Stripe. Anything over a dollar is flagged loudly.
   const crossDelta = Number((acuityRevenue - stripeGross).toFixed(2));
@@ -141,8 +152,15 @@ function buildEmailHTML(acuityData, qbData, weeklyData, stripeData) {
 
   const STRIPE_PCT = 0.029;
   const STRIPE_FLAT = 0.30;
-  const lastWeekStripeFees = (lastWeekRevenue * STRIPE_PCT) + (lastWeekSessions * STRIPE_FLAT);
-  const lastWeekNet = lastWeekRevenue - lastWeekStripeFees;
+  // Last week's facility days, counted the same way as this week's.
+  const lastWeekStart = new Date(weekStart); lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+  const lastWeekEnd = new Date(weekEnd); lastWeekEnd.setDate(lastWeekEnd.getDate() - 7);
+  const lastWayEast = wayEastForWeek(lastWeekStart, lastWeekEnd);
+  // Round the fee BEFORE subtracting, exactly as /api/stripe does for this week.
+  // Subtracting the raw float lands on a half-cent boundary and can drift a cent.
+  const lastWeekStripeFees = Math.round(((lastWeekRevenue * STRIPE_PCT) + (lastWeekSessions * STRIPE_FLAT)) * 100) / 100;
+  const lastWeekTotal = Number((lastWeekRevenue + lastWayEast.confirmedRevenue).toFixed(2));
+  const lastWeekNet = Number((lastWeekRevenue - lastWeekStripeFees + lastWayEast.confirmedRevenue).toFixed(2));
 
   // YTD Stripe fees estimate
   const ytdStripeFees = Math.round((grossRevenue * STRIPE_PCT) + (totalSessions * STRIPE_FLAT));
@@ -295,15 +313,15 @@ function buildEmailHTML(acuityData, qbData, weeklyData, stripeData) {
           </tr>
           <tr>
             <td style="padding:8px 0;color:#94a3b8;font-size:13px;">QB Income</td>
-            <td style="padding:8px 0;color:#4ade80;font-size:18px;font-weight:bold;text-align:right;">${formatCurrency(qbIncome)}</td>
+            ${qbCell(qbIncome, "#4ade80")}
           </tr>
           <tr>
             <td style="padding:8px 0;color:#94a3b8;font-size:13px;">QB Expenses</td>
-            <td style="padding:8px 0;color:#f87171;font-size:18px;font-weight:bold;text-align:right;">${formatCurrency(qbExpenses)}</td>
+            ${qbCell(qbExpenses, "#f87171")}
           </tr>
           <tr style="border-top:1px solid #1e293b;">
             <td style="padding:12px 0 8px;color:#fff;font-size:14px;font-weight:bold;">Net Profit</td>
-            <td style="padding:12px 0 8px;color:${netIncome >= 0 ? "#4ade80" : "#f87171"};font-size:20px;font-weight:bold;text-align:right;">${formatCurrency(netIncome)}</td>
+            ${qbConnected ? `<td style="padding:12px 0 8px;color:${netIncome >= 0 ? "#4ade80" : "#f87171"};font-size:20px;font-weight:bold;text-align:right;">${formatCurrency(netIncome)}</td>` : `<td style="padding:12px 0 8px;color:#fbbf24;font-size:13px;font-weight:bold;text-align:right;">QuickBooks needs re-authorising</td>`}
           </tr>
         </table>
       </div>
