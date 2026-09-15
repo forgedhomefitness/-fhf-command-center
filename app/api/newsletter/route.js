@@ -291,15 +291,23 @@ return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 const { searchParams } = new URL(request.url);
 const mode = searchParams.get("mode");
 
-// Timezone guard for dual-cron EST/EDT pattern
+// Timezone guard for the dual-cron EST/EDT pattern.
+//
+// BUG FIXED 2026-09-15: this used to derive DST from the SERVER's own clock
+// (getTimezoneOffset on Jan 1 vs Jul 1). Vercel runs in UTC, which has no DST,
+// so jan === jul === 0, isDST was always false, and currentTz was always
+// "est". The cron URL passed tz=edt, so the guard returned {skipped:true} on
+// EVERY invocation from 2026-06-06 onward. The Monday preview email never
+// fired once. Ask America/New_York what zone IT is in, not the server.
 const tzParam = searchParams.get("tz");
 if (tzParam) {
-const now = new Date();
-const jan = new Date(now.getFullYear(), 0, 1);
-const jul = new Date(now.getFullYear(), 6, 1);
-const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
-const isDST = now.getTimezoneOffset() < stdOffset;
-const currentTz = isDST ? "edt" : "est";
+const currentTz = new Intl.DateTimeFormat("en-US", {
+timeZone: "America/New_York",
+timeZoneName: "short",
+})
+.formatToParts(new Date())
+.find((part) => part.type === "timeZoneName")
+.value.toLowerCase(); // "edt" or "est"
 if (tzParam !== currentTz) {
 return NextResponse.json({
 skipped: true,
@@ -335,7 +343,20 @@ subject: newsletter.subject,
 resendId: result.id,
 });
 } else if (mode === "send" || mode === "approve") {
-// Tuesday (auto) or manual approve - send newsletter to Matt + BCC all clients
+// BCCs every address in CLIENT_EMAILS. That list is a SNAPSHOT and has
+// drifted from the list Matt actually sends to (it is missing several
+// current clients), and NEWSLETTERS is an 8-week fallback loop that will
+// re-send week 1 content once it wraps. Nothing is wired to call this on a
+// schedule any more - the Monday/Tuesday crons were retired 2026-09-15.
+// Require an explicit confirm so a stray GET can never mass-mail clients.
+if (searchParams.get("confirm") !== "yes") {
+return NextResponse.json({
+skipped: true,
+reason:
+"mode=send requires &confirm=yes. CLIENT_EMAILS is stale - reconcile it against the last real send before using this path.",
+}, { status: 409 });
+}
+// Manual approve - send newsletter to Matt + BCC all clients
 const html = buildEmailHTML(newsletter);
 const result = await sendEmail({
 to: MATT_EMAIL,
