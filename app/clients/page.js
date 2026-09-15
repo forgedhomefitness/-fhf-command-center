@@ -42,7 +42,7 @@ const DEFAULT_CLIENTS = [
     type: "private",
     startDate: "2026-03-01",
     notes:
-      "Schedule varies week to week. Tuesdays: private session alone $130. Thursdays: group training with husband Jon Nuger same hour $205. Either may be absent due to travel/work.",
+      "Schedule varies week to week. Tuesdays: private session alone $150. Thursdays: group training with husband Jon Nuger same hour $240. Either may be absent due to travel/work. (Prices corrected 2026-09-15 - this note still carried the pre-September $130/$205 card. Verified against Stripe: she is billing $150/$240 since Sept 1. The Nugers are NOT grandfathered.)",
     status: "active",
   },
   {
