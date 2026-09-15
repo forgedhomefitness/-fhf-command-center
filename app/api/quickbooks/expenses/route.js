@@ -95,7 +95,11 @@ function isExpenseGroup(groupName) {
 }
 
 // ââ IRS Mileage Rate âââââââââââââââââââââââââââââââââââââââââ
-const IRS_MILEAGE_RATE_2026 = 0.725; // 2026 standard rate (update annually)
+// IRS standard mileage SPLITS MID-YEAR in 2026: $0.725 Jan 1 - Jun 30,
+// $0.76 Jul 1 - Dec 31.
+const IRS_MILEAGE_RATE_H1 = 0.725;
+const IRS_MILEAGE_RATE_H2 = 0.76;
+const IRS_MILEAGE_RATE_2026 = new Date() >= new Date("2026-07-01T00:00:00") ? IRS_MILEAGE_RATE_H2 : IRS_MILEAGE_RATE_H1;
 
 // ââ Expense categories for personal training âââââââââââââââââ
 const EXPENSE_CATEGORIES = {
@@ -311,11 +315,12 @@ export async function GET(request) {
       }));
 
     // Mileage estimate (if gas expenses exist)
+    // FHF uses the STANDARD MILEAGE RATE, and that rate already includes gas,
+    // oil, repairs, maintenance, insurance, depreciation and registration.
+    // Deriving a "deduction" from gas spending and showing it next to the real
+    // mileage log invites exactly the double-dip the CPA warned about, so the
+    // gas total is reported as spend only - never as a deduction.
     const gasTotal = byCategory.gas?.total || 0;
-    const estimatedGallons = gasTotal / 3.5; // avg gas price estimate
-    const estimatedMiles = estimatedGallons * 25; // avg MPG estimate
-    const mileageDeduction =
-      Math.round(estimatedMiles * IRS_MILEAGE_RATE_2026 * 100) / 100;
 
     return NextResponse.json({
       connected: true,
@@ -326,10 +331,9 @@ export async function GET(request) {
       expensesByCategory: sortedCategories,
       mileageEstimate: {
         gasSpent: Math.round(gasTotal * 100) / 100,
-        estimatedMiles: Math.round(estimatedMiles),
         irsRate: IRS_MILEAGE_RATE_2026,
-        potentialDeduction: mileageDeduction,
-        note: "Track actual miles for maximum deduction. This is an estimate based on gas spending.",
+        potentialDeduction: null,
+        note: "Gas spend only. FHF claims the STANDARD MILEAGE RATE, which already includes gas, oil, repairs, maintenance, insurance, depreciation and registration - so gas is NOT separately deductible and no deduction is derived from it here. Only tolls and parking sit on top of the mileage rate. The deduction comes from the actual mileage log.",
       },
       topExpenses: expenses.sort((a, b) => b.amount - a.amount).slice(0, 10),
       _debug: { groupNames },
