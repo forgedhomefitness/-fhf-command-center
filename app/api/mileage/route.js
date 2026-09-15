@@ -42,7 +42,29 @@ async function verifyAuth(request) {
   return false;
 }
 
-const IRS_MILEAGE_RATE = 0.725;
+// IRS standard mileage SPLITS MID-YEAR in 2026: $0.725 Jan 1 - Jun 30,
+// $0.76 Jul 1 - Dec 31. A single rate for the whole year under-claims H2 by 4.8%.
+const IRS_MILEAGE_RATE_H1 = 0.725;
+const IRS_MILEAGE_RATE_H2 = 0.76;
+function irsMileageRate(d = new Date()) {
+  return new Date(d) >= new Date("2026-07-01T00:00:00") ? IRS_MILEAGE_RATE_H2 : IRS_MILEAGE_RATE_H1;
+}
+const IRS_MILEAGE_RATE = irsMileageRate();
+
+// Stored mileage is a snapshot written by the weekly audit. If nothing has
+// written to it for a while, it is NOT "this week" - it is a stale snapshot,
+// and presenting it as current is how an April figure gets read as today's.
+const STALE_AFTER_DAYS = 10;
+function stalenessOf(lastUpdated) {
+  if (!lastUpdated) return { stale: true, ageDays: null, warning: "No mileage snapshot has ever been written." };
+  const ageDays = Math.floor((Date.now() - new Date(lastUpdated).getTime()) / 86400000);
+  if (ageDays <= STALE_AFTER_DAYS) return { stale: false, ageDays };
+  return {
+    stale: true,
+    ageDays,
+    warning: `STALE: this mileage snapshot is ${ageDays} days old (last written ${String(lastUpdated).slice(0,10)}). The week/month/ytd figures below describe that date, NOT today. Do not read them as current and do not file them.`,
+  };
+}
 
 export async function GET() {
   try {
@@ -57,7 +79,8 @@ export async function GET() {
         note: "No mileage data yet. Data updates every Saturday during the weekly audit.",
       });
     }
-    return NextResponse.json({ connected: true, irsRate: IRS_MILEAGE_RATE, ...mileageData });
+    const freshness = stalenessOf(mileageData.lastUpdated);
+    return NextResponse.json({ connected: true, irsRate: IRS_MILEAGE_RATE, ...freshness, ...mileageData });
   } catch (err) {
     return NextResponse.json({ error: err.message, connected: false }, { status: 500 });
   }
