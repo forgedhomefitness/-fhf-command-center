@@ -1,25 +1,61 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = [
-  "/login",
-  "/api/auth",
+// Reachable with no credential at all. Keep this list as short as it can be.
+const ALWAYS_PUBLIC = ["/login", "/api/auth"];
+
+// Cron-invoked ACTIONS. Vercel cron cannot send a cookie, and each of these
+// already enforces its own CRON_SECRET bearer check internally, so the
+// middleware lets them through and the route decides.
+const ACTION_PATHS = [
   "/api/reports",
-  "/api/acuity",
-  "/api/quickbooks",
-  "/api/stripe",
-  "/api/analytics",
-  "/api/mileage",
   "/api/newsletter",
   "/api/monthly-newsletter",
   "/api/send-report",
-    "/api/cron",
+  "/api/cron",
 ];
+
+// DATA endpoints. These were public, and /api/stripe returns charge
+// descriptions containing CLIENT NAMES alongside revenue, customer counts and
+// YTD totals - on a PUBLIC repo, which makes the URL findable. They now
+// require either the dashboard cookie or the internal/cron bearer.
+const PROTECTED_DATA_PATHS = [
+  "/api/stripe",
+  "/api/acuity",
+  "/api/quickbooks",
+  "/api/analytics",
+  "/api/mileage",
+];
+
+function hasInternalBearer(request) {
+  const secret = process.env.CRON_SECRET;
+  // FAIL OPEN when no secret is configured. Without CRON_SECRET there is no
+  // way for the weekly report to authenticate its own read of /api/stripe,
+  // and silently breaking the Saturday tax-reserve email would be worse than
+  // the leak this closes. With CRON_SECRET set (it is, in Vercel) this is a
+  // real gate. If these endpoints ever go public again, that env var is why.
+  if (!secret) return true;
+  const auth = request.headers.get("authorization");
+  return auth === `Bearer ${secret}`;
+}
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
+  if (ALWAYS_PUBLIC.some((path) => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+
+  if (ACTION_PATHS.some((path) => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+
+  // Server-to-server calls (the weekly report reading /api/stripe, the daily
+  // cron fanning out) carry the CRON_SECRET bearer instead of a cookie.
+  if (
+    PROTECTED_DATA_PATHS.some((path) => pathname.startsWith(path)) &&
+    hasInternalBearer(request)
+  ) {
     return NextResponse.next();
   }
 
