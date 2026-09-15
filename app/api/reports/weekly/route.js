@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import wayEastLog from "@/data/way-east-log.json";
 
 // Resend email service — free tier: 100 emails/month
 // Set RESEND_API_KEY in Vercel env vars
@@ -46,9 +47,53 @@ function isEDT() {
   }
 }
 
+// Cent-exact. Matt: "make sure its down to the cent correct."
 function formatCurrency(val) {
-  if (val == null) return "$0";
-  return "$" + Math.round(val).toLocaleString();
+  if (val == null) return "$0.00";
+  return "$" + Number(val).toLocaleString("en-US", {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  });
+}
+
+// ---- Way East facility -------------------------------------------------
+// $75 per DAY, invoiced by check, invisible to Stripe AND Acuity.
+// Counts ONLY days confirmed taught. A scheduled class is not evidence.
+function isoDay(d) { return d.toISOString().slice(0, 10); }
+
+function wayEastForWeek(weekStart, weekEnd) {
+  const rate = wayEastLog.ratePerDay || 75;
+  const taught = new Set(wayEastLog.confirmedTaught || []);
+  const notTaught = new Set(Object.keys(wayEastLog.confirmedNotTaught || {}));
+  const closures = new Set(wayEastLog.closures || []);
+  const start = wayEastLog.programStart || "2026-09-03";
+
+  const confirmed = [], pending = [];
+  for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+    const iso = isoDay(d), dow = d.getUTCDay();
+    if (dow === 0 || dow === 6) continue;      // Way East is Mon-Fri
+    if (iso < start) continue;
+    if (closures.has(iso) || notTaught.has(iso)) continue;
+    if (taught.has(iso)) confirmed.push(iso);
+    else pending.push(iso);                     // scheduled but UNCONFIRMED
+  }
+  return {
+    rate,
+    confirmedDays: confirmed,
+    pendingDays: pending,
+    confirmedRevenue: confirmed.length * rate,
+    pendingRevenue: pending.length * rate,
+  };
+}
+
+// Reporting week = Mon-Sat (Matt never works Sundays), in America/New_York.
+function currentWeekMonSat() {
+  const now = new Date();
+  const et = new Date(now.toLocaleString("en-US", { timeZone: "America/New_York" }));
+  const dow = et.getDay();                       // 0=Sun
+  const back = dow === 0 ? 6 : dow - 1;          // Sunday belongs to the week just ended
+  const mon = new Date(Date.UTC(et.getFullYear(), et.getMonth(), et.getDate() - back));
+  const sat = new Date(Date.UTC(et.getFullYear(), et.getMonth(), et.getDate() - back + 5));
+  return { weekStart: mon, weekEnd: sat };
 }
 
 async function fetchInternal(path) {
@@ -61,25 +106,42 @@ async function fetchInternal(path) {
   }
 }
 
-function buildEmailHTML(acuityData, qbData, weeklyData) {
+function buildEmailHTML(acuityData, qbData, weeklyData, stripeData) {
   const grossRevenue = acuityData?.totalRevenue || 0;
   const totalSessions = acuityData?.totalSessions || 0;
   const qbIncome = qbData?.totalIncome || 0;
   const qbExpenses = qbData?.totalExpenses || 0;
   const netIncome = qbData?.netIncome || 0;
 
-  // This week's numbers from /api/acuity
-  const thisWeekRevenue = weeklyData?.weekRevenue || 0;
+  // MONEY ACTUALLY COLLECTED comes from Stripe, which reports real fees to the
+  // cent. Acuity is kept only as a cross-check - the two diverge (Acuity counts
+  // session records, Stripe counts charges) and a silent divergence is how a
+  // week gets misreported.
+  const stripeGross = stripeData?.weekRevenue ?? 0;
+  const stripeFees = stripeData?.weekStripeFees ?? 0;
+  const stripeNet = stripeData?.weekNetRevenue ?? (stripeGross - stripeFees);
+  const stripeCount = stripeData?.weekChargeCount ?? 0;
+
+  const acuityRevenue = weeklyData?.weekRevenue || 0;
   const thisWeekSessions = weeklyData?.weekSessions || 0;
   const lastWeekRevenue = weeklyData?.lastWeekRevenue || 0;
   const lastWeekSessions = weeklyData?.lastWeekSessions || 0;
 
-  // Stripe fees: 2.9% + $0.30 per transaction
+  // CROSS-CHECK: Acuity vs Stripe. Anything over a dollar is flagged loudly.
+  const crossDelta = Number((acuityRevenue - stripeGross).toFixed(2));
+  const crossClean = Math.abs(crossDelta) < 1;
+
+  // FACILITY - $75/day Way East, never in Stripe or Acuity, confirmed days only
+  const { weekStart, weekEnd } = currentWeekMonSat();
+  const wayEast = wayEastForWeek(weekStart, weekEnd);
+
+  const thisWeekRevenue = Number((stripeGross + wayEast.confirmedRevenue).toFixed(2));
+  const thisWeekStripeFees = Number(stripeFees.toFixed(2));
+  const thisWeekNet = Number((stripeNet + wayEast.confirmedRevenue).toFixed(2));
+
   const STRIPE_PCT = 0.029;
   const STRIPE_FLAT = 0.30;
-  const thisWeekStripeFees = Math.round((thisWeekRevenue * STRIPE_PCT) + (thisWeekSessions * STRIPE_FLAT));
-  const thisWeekNet = thisWeekRevenue - thisWeekStripeFees;
-  const lastWeekStripeFees = Math.round((lastWeekRevenue * STRIPE_PCT) + (lastWeekSessions * STRIPE_FLAT));
+  const lastWeekStripeFees = (lastWeekRevenue * STRIPE_PCT) + (lastWeekSessions * STRIPE_FLAT);
   const lastWeekNet = lastWeekRevenue - lastWeekStripeFees;
 
   // YTD Stripe fees estimate
@@ -87,7 +149,9 @@ function buildEmailHTML(acuityData, qbData, weeklyData) {
   const ytdNetRevenue = grossRevenue - ytdStripeFees;
 
   const TAX_RATE = 0.3;
-  const weeklyTaxReserve = Math.round(thisWeekNet * TAX_RATE);
+  // 30% of TOTAL net = Stripe net (after real fees) + facility. Facility is paid
+  // by check and carries no Stripe fee, so it enters at full value. Cent-exact.
+  const weeklyTaxReserve = Number((thisWeekNet * TAX_RATE).toFixed(2));
   const ytdGrossTax = Math.round(grossRevenue * TAX_RATE);
   const ytdNetTax = Math.round(ytdNetRevenue * TAX_RATE);
 
@@ -98,9 +162,13 @@ function buildEmailHTML(acuityData, qbData, weeklyData) {
 
   // Phase 1 target
   const annualTarget = 108000;
-  const weeklyTarget = 2077;
+  // Board as actually booked: $3,810/wk from Mon 9/21/2026 (Bennette rebuilt
+  // +$105, Adam's Friday flipped to Group +$90). $3,615 before that.
+  const weeklyTarget = new Date() >= new Date("2026-09-21T00:00:00-04:00") ? 3810 : 3615;
   const pctTarget = Math.round((grossRevenue / annualTarget) * 100);
-  const weeklyPctTarget = Math.min(100, Math.round((thisWeekNet / weeklyTarget) * 100));
+  // GROSS vs GROSS. The old code compared net revenue to a gross target, which
+  // flattered every week.
+  const weeklyPctTarget = Math.min(100, Math.round((thisWeekRevenue / weeklyTarget) * 100));
 
   const now = new Date();
   const weekOf = now.toLocaleDateString("en-US", {
@@ -143,7 +211,7 @@ function buildEmailHTML(acuityData, qbData, weeklyData) {
       <!-- THIS WEEK — Hero Section -->
       <div style="background:linear-gradient(135deg,#001F3F,#0a2a4f);border-radius:12px;padding:24px;margin-bottom:16px;border:2px solid #FED402;">
         <h2 style="margin:0 0 4px;color:#FED402;font-size:14px;text-transform:uppercase;letter-spacing:2px;">This Week</h2>
-        <p style="margin:0 0 16px;color:#64748b;font-size:11px;">Mon\u2013Sun revenue from Acuity sessions</p>
+        <p style="margin:0 0 16px;color:#64748b;font-size:11px;">Mon\u2013Sat \u00b7 Stripe charges + Way East facility (confirmed days only)</p>
 
         <div style="display:flex;gap:16px;margin-bottom:12px;">
           <div style="flex:1;">
@@ -156,21 +224,36 @@ function buildEmailHTML(acuityData, qbData, weeklyData) {
           </div>
           <div style="flex:1;">
             <p style="margin:0;color:#94a3b8;font-size:11px;text-transform:uppercase;">Sessions</p>
-            <p style="margin:4px 0 0;color:#fff;font-size:28px;font-weight:bold;">${thisWeekSessions}</p>
+            <p style="margin:4px 0 0;color:#fff;font-size:28px;font-weight:bold;">${stripeCount}</p>
           </div>
         </div>
+
+        <!-- Facility + cross-check -->
+        <div style="background:rgba(254,212,2,0.08);border-radius:8px;padding:12px 16px;margin-bottom:12px;border-left:3px solid #FED402;">
+          <div style="display:flex;justify-content:space-between;">
+            <p style="margin:0;color:#94a3b8;font-size:12px;font-weight:bold;">WAY EAST FACILITY</p>
+            <p style="margin:0;color:#FED402;font-size:18px;font-weight:bold;">${formatCurrency(wayEast.confirmedRevenue)}</p>
+          </div>
+          <p style="margin:4px 0 0;color:#64748b;font-size:11px;">${wayEast.confirmedDays.length} confirmed day${wayEast.confirmedDays.length === 1 ? "" : "s"} \u00d7 ${formatCurrency(wayEast.rate)} \u2014 invoiced by check, never in Stripe${wayEast.confirmedDays.length ? " \u00b7 " + wayEast.confirmedDays.join(", ") : ""}</p>
+          ${wayEast.pendingDays.length ? `<p style="margin:6px 0 0;color:#fbbf24;font-size:11px;font-weight:bold;">\u26a0 ${wayEast.pendingDays.length} day${wayEast.pendingDays.length === 1 ? "" : "s"} NOT CONFIRMED and NOT counted: ${wayEast.pendingDays.join(", ")} \u2014 worth ${formatCurrency(wayEast.pendingRevenue)}. Confirm to Atlas and this figure rises.</p>` : ""}
+        </div>
+
+        ${crossClean ? "" : `<div style="background:rgba(248,113,113,0.12);border-radius:8px;padding:12px 16px;margin-bottom:12px;border-left:3px solid #f87171;">
+          <p style="margin:0;color:#f87171;font-size:12px;font-weight:bold;">\u26a0 CROSS-CHECK FAILED</p>
+          <p style="margin:4px 0 0;color:#fca5a5;font-size:11px;">Acuity says ${formatCurrency(acuityRevenue)}, Stripe says ${formatCurrency(stripeGross)} \u2014 a ${formatCurrency(Math.abs(crossDelta))} gap. A session was trained and not charged, or charged and not booked. Check before trusting this week.</p>
+        </div>`}
 
         <!-- Net revenue highlight -->
         <div style="background:rgba(74,222,128,0.1);border-radius:8px;padding:12px 16px;margin-bottom:12px;border-left:3px solid #4ade80;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <p style="margin:0;color:#94a3b8;font-size:12px;font-weight:bold;">NET REVENUE (after Stripe)</p>
+            <p style="margin:0;color:#94a3b8;font-size:12px;font-weight:bold;">TOTAL NET (Stripe after fees + facility)</p>
             <p style="margin:0;color:#4ade80;font-size:24px;font-weight:bold;">${formatCurrency(thisWeekNet)}</p>
           </div>
           <p style="margin:4px 0 0;color:${revenueDiffColor};font-size:11px;">${revenueDiffSign}${formatCurrency(Math.abs(revenueDiff))} vs last week (net) &bull; Last week: ${lastWeekSessions} sessions</p>
         </div>
 
         <!-- Weekly target progress bar -->
-        <p style="margin:0 0 6px;color:#94a3b8;font-size:11px;">Weekly Target: ${formatCurrency(thisWeekNet)} / ${formatCurrency(weeklyTarget)} (${weeklyPctTarget}%)</p>
+        <p style="margin:0 0 6px;color:#94a3b8;font-size:11px;">Weekly Target (gross): ${formatCurrency(thisWeekRevenue)} / ${formatCurrency(weeklyTarget)} (${weeklyPctTarget}%)</p>
         <div style="background:#1e293b;border-radius:8px;height:12px;overflow:hidden;">
           <div style="background:linear-gradient(90deg,#FED402,#FFCC00);height:12px;width:${Math.min(100, weeklyPctTarget)}%;border-radius:8px;"></div>
         </div>
@@ -180,8 +263,8 @@ function buildEmailHTML(acuityData, qbData, weeklyData) {
       <div style="background:#111827;border-radius:12px;padding:24px;margin-bottom:16px;border-top:4px solid #FED402;text-align:center;">
         <p style="margin:0;color:#FED402;font-size:12px;text-transform:uppercase;letter-spacing:2px;font-weight:bold;">Put Aside This Week</p>
         <p style="margin:8px 0 0;color:#FED402;font-size:42px;font-weight:bold;">${formatCurrency(weeklyTaxReserve)}</p>
-        <p style="margin:4px 0 0;color:#64748b;font-size:12px;">30% of ${formatCurrency(thisWeekNet)} net (after ${formatCurrency(thisWeekStripeFees)} Stripe fees)</p>
-        <p style="margin:2px 0 0;color:#475569;font-size:11px;">Transfer to BlueVine tax reserve</p>
+        <p style="margin:4px 0 0;color:#64748b;font-size:12px;">30% of ${formatCurrency(thisWeekNet)} total net \u2014 ${formatCurrency(stripeNet)} Stripe (after ${formatCurrency(thisWeekStripeFees)} fees) + ${formatCurrency(wayEast.confirmedRevenue)} facility</p>
+        <p style="margin:2px 0 0;color:#475569;font-size:11px;">Transfer to Rockland Trust \u2014 Tax Reserve (0036)</p>
       </div>
 
       <!-- YTD Summary -->
@@ -259,7 +342,7 @@ function buildEmailHTML(acuityData, qbData, weeklyData) {
       <div style="background:#111827;border-radius:12px;padding:16px;border-left:3px solid #FED402;">
         <p style="margin:0;color:#94a3b8;font-size:11px;">
           <strong style="color:#fff;">CPA: Turner & Costa PC</strong><br/>
-          This is an automated report from FHF Command Center. The 30% tax reserve is a conservative estimate. Consult your CPA for actual obligations including self-employment tax and quarterly estimated payments.
+          This is an automated report from FHF Command Center. The 30% tax reserve is a conservative estimate. Consult your CPA for actual obligations. Turner &amp; Costa: no quarterly estimated payments for 2026 \u2014 pay at year-end.
         </p>
       </div>
 
@@ -314,13 +397,14 @@ export async function GET(request) {
     // /api/acuity = current week + last week comparison
     // /api/acuity/ytd = year-to-date totals
     // /api/quickbooks/pnl = P&L from QuickBooks
-    const [weeklyData, acuityData, qbData] = await Promise.all([
+    const [weeklyData, acuityData, qbData, stripeData] = await Promise.all([
       fetchInternal("/api/acuity"),
       fetchInternal("/api/acuity/ytd"),
       fetchInternal("/api/quickbooks/pnl"),
+      fetchInternal("/api/stripe"),
     ]);
 
-    const html = buildEmailHTML(acuityData, qbData, weeklyData);
+    const html = buildEmailHTML(acuityData, qbData, weeklyData, stripeData);
 
     const recipientEmail =
       process.env.REPORT_EMAIL || "forgedhomefitness@gmail.com";
@@ -358,10 +442,14 @@ export async function GET(request) {
     }
 
     const result = await emailRes.json();
-    const weekRev = weeklyData?.weekRevenue || 0;
-    const weekSess = weeklyData?.weekSessions || 0;
-    const weekFees = Math.round((weekRev * 0.029) + (weekSess * 0.30));
-    const weekNet = weekRev - weekFees;
+    const { weekStart: ws, weekEnd: we } = currentWeekMonSat();
+    const we2 = wayEastForWeek(ws, we);
+    const sGross = stripeData?.weekRevenue ?? 0;
+    const sFees = stripeData?.weekStripeFees ?? 0;
+    const sNet = stripeData?.weekNetRevenue ?? (sGross - sFees);
+    const weekRev = Number((sGross + we2.confirmedRevenue).toFixed(2));
+    const weekFees = Number(sFees.toFixed(2));
+    const weekNet = Number((sNet + we2.confirmedRevenue).toFixed(2));
     return NextResponse.json({
       sent: true,
       to: recipientEmail,
@@ -370,7 +458,10 @@ export async function GET(request) {
       thisWeekGross: weekRev,
       thisWeekStripeFees: weekFees,
       thisWeekNet: weekNet,
-      thisWeekTaxReserve: Math.round(weekNet * 0.3),
+      thisWeekTaxReserve: Number((weekNet * 0.3).toFixed(2)),
+      facilityConfirmed: we2.confirmedRevenue,
+      facilityConfirmedDays: we2.confirmedDays,
+      facilityPendingDays: we2.pendingDays,
       ytdGrossRevenue: acuityData?.totalRevenue || 0,
     });
   } catch (err) {
