@@ -21,9 +21,9 @@ export default function DailyBriefing({ stripeData, acuityData, igData }) {
     const prompt = `Generate Matt's daily business briefing. Today: ${today}.
 
 LIVE DATA:
-- Month revenue: $${stripeData?.monthRevenue || 0} / $9,000 target
+- Month revenue: $${stripeData?.monthRevenue || 0} / $16,000 target
 - Year revenue: $${stripeData?.yearRevenue || 0} / $108,000 annual target
-- Sessions this week: ${acuityData?.weekSessions || 0} / 18 target
+- Sessions this week: ${acuityData?.weekSessions || 0} (the target that matters is $3,810/wk of booked revenue, not a session count)
 - Instagram followers: ${igData?.followers || 0} / 300 target
 - Active customers: ${stripeData?.customerCount || 0}
 ${stripeData?.recentCharges?.[0] ? `- Last charge: $${stripeData.recentCharges[0].amount} on ${new Date(stripeData.recentCharges[0].date).toLocaleDateString()}` : ""}
